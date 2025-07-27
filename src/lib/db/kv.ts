@@ -1,4 +1,5 @@
 import { kv } from '@vercel/kv';
+import { config } from '../config/env';
 
 export interface KVCache {
   get<T = any>(key: string): Promise<T | null>;
@@ -21,6 +22,11 @@ class VercelKVService implements KVCache {
   }
 
   async get<T = any>(key: string): Promise<T | null> {
+    // Demo mode - return null
+    if (config.kv.isDemo) {
+      return null;
+    }
+    
     try {
       const value = await kv.get<T>(this.getKey(key));
       return value;
@@ -35,6 +41,11 @@ class VercelKVService implements KVCache {
     value: T,
     options?: { ex?: number }
   ): Promise<void> {
+    // Demo mode - do nothing
+    if (config.kv.isDemo) {
+      return;
+    }
+    
     try {
       if (options?.ex) {
         await kv.set(this.getKey(key), value, { ex: options.ex });
@@ -165,6 +176,15 @@ export class RateLimiter {
     limit: number,
     window: number = 60
   ): Promise<{ allowed: boolean; remaining: number; resetAt: number }> {
+    // Demo mode - always allow
+    if (config.kv.isDemo) {
+      return {
+        allowed: true,
+        remaining: limit,
+        resetAt: Date.now() + (window * 1000),
+      };
+    }
+    
     const cacheKey = CacheKeys.rateLimit(key);
     const current = await this.kv.get<number>(cacheKey) || 0;
 

@@ -3,6 +3,8 @@ import { getContractService } from '@/lib/db/mongodb';
 import { Contract, ContractSearchParams } from '@/types/contract';
 import { rateLimiter } from '@/lib/db/kv';
 import { ERROR_MESSAGES } from '@/lib/utils/constants';
+import { config } from '@/lib/config/env';
+import { demoContracts } from '@/lib/db/demo-data';
 
 // GET /api/contracts - Get all contracts with pagination and filtering
 export async function GET(request: NextRequest) {
@@ -28,6 +30,22 @@ export async function GET(request: NextRequest) {
       sortBy: searchParams.get('sortBy') || 'createdAt',
       sortOrder: (searchParams.get('sortOrder') || 'desc') as 'asc' | 'desc',
     };
+
+    // Demo mode - return mock data
+    if (config.isDemo) {
+      const result = {
+        data: demoContracts,
+        pagination: {
+          page: 1,
+          limit: 20,
+          total: demoContracts.length,
+          totalPages: 1,
+          hasNext: false,
+          hasPrev: false,
+        },
+      };
+      return NextResponse.json(result);
+    }
 
     const contractService = await getContractService();
     

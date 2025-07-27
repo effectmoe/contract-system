@@ -9,12 +9,13 @@ import {
 import { Contract, ContractTemplate, AuditEntry } from '@/types/contract';
 import { User, Session, AICacheEntry } from '@/types/database';
 
-const MONGODB_URI = process.env.MONGODB_URI!;
+import { config } from '../config/env';
+
+const MONGODB_URI = process.env.MONGODB_URI || '';
 const MONGODB_DB_NAME = 'contract_system';
 
-if (!MONGODB_URI) {
-  throw new Error('Please define the MONGODB_URI environment variable');
-}
+// Demo mode check
+const isDemoMode = config.mongodb.isDemo;
 
 // Global connection cache
 let cached: MongoDBConnection = {
@@ -23,6 +24,12 @@ let cached: MongoDBConnection = {
 };
 
 export async function connectToDatabase(): Promise<{ client: MongoClient; db: Db }> {
+  // Demo mode - return mock connection
+  if (isDemoMode) {
+    console.warn('Running in demo mode - MongoDB operations will not persist');
+    return { client: null as any, db: null as any };
+  }
+
   if (cached.client && cached.db) {
     return { client: cached.client, db: cached.db };
   }
