@@ -32,7 +32,9 @@ export async function POST(request: NextRequest) {
         );
 
         const cookieStore = await cookies();
-        cookieStore.set('contract-viewer-session', sessionToken, {
+        cookieStore.set({
+          name: 'contract-viewer-session',
+          value: sessionToken,
           httpOnly: true,
           secure: process.env.NODE_ENV === 'production',
           sameSite: 'lax',
@@ -104,7 +106,9 @@ export async function POST(request: NextRequest) {
 
     // Set session cookie
     const cookieStore = await cookies();
-    cookieStore.set('contract-viewer-session', sessionToken, {
+    cookieStore.set({
+      name: 'contract-viewer-session',
+      value: sessionToken,
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
       sameSite: 'lax',
