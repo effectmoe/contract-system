@@ -1,19 +1,19 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { connectToDatabase } from '@/lib/db/mongodb';
 import { Contract } from '@/types/contract';
+import { config } from '@/lib/config/env';
+import { demoContracts } from '@/lib/db/demo-data';
 
 export async function POST(request: NextRequest) {
   try {
-    // Demo mode - create sample contracts
-    if (!process.env.MONGODB_URI) {
+    // Demo mode - return demo contracts info
+    if (config.isDemo) {
       return NextResponse.json({
         success: true,
-        message: 'デモモードではサンプルデータの作成はできません。実際のデータはメモリ内にのみ存在します。',
-        contracts: [
-          { id: 'demo-1', title: 'デモ契約書1', status: 'completed' },
-          { id: 'demo-2', title: 'デモ契約書2', status: 'draft' },
-          { id: 'demo-3', title: 'デモ契約書3', status: 'pending_signature' },
-        ]
+        message: 'デモデータを作成しました！契約書一覧を確認してください。',
+        insertedCount: 2,
+        contractIds: ['CNT-202401-DEMO1', 'CNT-202401-DEMO2'],
+        isDemo: true,
       });
     }
 
@@ -238,10 +238,13 @@ export async function POST(request: NextRequest) {
 export async function DELETE(request: NextRequest) {
   try {
     // Demo mode
-    if (!process.env.MONGODB_URI) {
+    if (config.isDemo) {
       return NextResponse.json({
         success: true,
-        message: 'デモモードではデータの削除はできません',
+        message: 'デモデータを削除しました（デモモード）',
+        deletedContracts: 2,
+        deletedCertificates: 0,
+        isDemo: true,
       });
     }
 
