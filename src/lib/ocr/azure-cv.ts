@@ -1,16 +1,13 @@
-import { ComputerVisionClient } from '@azure/cognitiveservices-computervision';
-import { ApiKeyCredentials } from '@azure/ms-rest-js';
 import { kvCache, CacheKeys, CacheDurations } from '@/lib/db/kv';
+import { config } from '../config/env';
 
 // Azure Computer Vision configuration
 const endpoint = process.env.AZURE_COMPUTER_VISION_ENDPOINT!;
 const apiKey = process.env.AZURE_COMPUTER_VISION_KEY!;
 
-// Initialize client
-const computerVisionClient = new ComputerVisionClient(
-  new ApiKeyCredentials({ inHeader: { 'Ocp-Apim-Subscription-Key': apiKey } }),
-  endpoint
-);
+// 動的インポート用の型
+type ComputerVisionClient = any;
+type ApiKeyCredentials = any;
 
 export interface OCRResult {
   text: string;
@@ -32,10 +29,33 @@ export interface OCRWord {
 }
 
 export class AzureComputerVisionService {
+  private async getClient(): Promise<ComputerVisionClient> {
+    // デモモードの場合はnullを返す
+    if (config.ai.azure.isDemo || config.isDemo) {
+      throw new Error('Demo mode - OCR not available');
+    }
+
+    // 動的インポート
+    const [{ ComputerVisionClient }, { ApiKeyCredentials }] = await Promise.all([
+      import('@azure/cognitiveservices-computervision'),
+      import('@azure/ms-rest-js')
+    ]);
+
+    return new ComputerVisionClient(
+      new ApiKeyCredentials({ inHeader: { 'Ocp-Apim-Subscription-Key': apiKey } }),
+      endpoint
+    );
+  }
+
   /**
    * Perform OCR on an image URL
    */
   async extractTextFromUrl(imageUrl: string): Promise<OCRResult> {
+    // デモモードの場合はデモ結果を返す
+    if (config.ai.azure.isDemo || config.isDemo) {
+      return this.getDemoOCRResult('URL画像のデモテキスト');
+    }
+
     // Check cache first
     const cacheKey = CacheKeys.ocrResult(this.hashUrl(imageUrl));
     const cached = await kvCache.get<OCRResult>(cacheKey);
@@ -44,6 +64,8 @@ export class AzureComputerVisionService {
     }
 
     try {
+      const computerVisionClient = await this.getClient();
+      
       // Start the OCR operation
       const operation = await computerVisionClient.read(imageUrl);
       const operationId = this.extractOperationId(operation.operationLocation);
@@ -80,6 +102,11 @@ export class AzureComputerVisionService {
    * Perform OCR on a base64 encoded image
    */
   async extractTextFromBase64(base64Data: string): Promise<OCRResult> {
+    // デモモードの場合はデモ結果を返す
+    if (config.ai.azure.isDemo || config.isDemo) {
+      return this.getDemoOCRResult('Base64画像のデモテキスト');
+    }
+
     // Check cache first
     const cacheKey = CacheKeys.ocrResult(this.hashString(base64Data));
     const cached = await kvCache.get<OCRResult>(cacheKey);
@@ -88,6 +115,8 @@ export class AzureComputerVisionService {
     }
 
     try {
+      const computerVisionClient = await this.getClient();
+      
       // Convert base64 to buffer
       const buffer = Buffer.from(base64Data, 'base64');
 
@@ -254,6 +283,27 @@ export class AzureComputerVisionService {
       hash = hash & hash;
     }
     return Math.abs(hash).toString(36);
+  }
+
+  private getDemoOCRResult(demoText: string): OCRResult {
+    return {
+      text: `${demoText}\n\nこれはデモモードです。\n実際の環境では画像から文字を認識します。\n\n契約書のサンプルテキスト：\n契約書\n甲：サンプル会社\n乙：テスト太郎\n\n第1条（目的）\n本契約は、デモ用の契約です。\n\n令和6年1月1日`,
+      lines: [
+        {
+          text: demoText,
+          boundingBox: [0, 0, 100, 20],
+          words: [
+            {
+              text: demoText,
+              boundingBox: [0, 0, 100, 20],
+              confidence: 0.95
+            }
+          ]
+        }
+      ],
+      language: 'ja',
+      confidence: 0.95
+    };
   }
 }
 

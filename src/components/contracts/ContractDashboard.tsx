@@ -292,7 +292,7 @@ export default function ContractDashboard() {
           filteredContracts.map((contract) => (
             <Link
               key={contract._id}
-              href={`/contracts/${contract._id}`}
+              href={`/contracts/${contract.contractId}`}
               className="card hover:shadow-lg transition-shadow block"
             >
               <div className="flex items-center justify-between">

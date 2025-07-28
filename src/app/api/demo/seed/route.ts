@@ -6,8 +6,18 @@ import { demoContracts } from '@/lib/db/demo-data';
 
 export async function POST(request: NextRequest) {
   try {
+    console.log('Demo seed API called');
+    console.log('Config isDemo:', config.isDemo);
+    console.log('MongoDB URI:', process.env.MONGODB_URI ? 'Set' : 'Not set');
+    console.log('KV URL:', process.env.KV_REST_API_URL ? 'Set' : 'Not set');
+    console.log('MongoDB URI value:', process.env.MONGODB_URI);
+    
+    // Force demo mode if MongoDB URI is not properly configured
+    const isActuallyDemo = !process.env.MONGODB_URI || process.env.MONGODB_URI === 'demo-mode' || process.env.MONGODB_URI.includes('your-cluster');
+    
     // Demo mode - return demo contracts info
-    if (config.isDemo) {
+    if (config.isDemo || isActuallyDemo) {
+      console.log('Running in demo mode (forced)');
       return NextResponse.json({
         success: true,
         message: 'デモデータを作成しました！契約書一覧を確認してください。',
@@ -30,7 +40,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Create demo contracts
-    const demoContracts: Contract[] = [
+    const demoContractData: Contract[] = [
       {
         contractId: 'DEMO-001',
         title: '業務委託契約書',
@@ -218,18 +228,25 @@ export async function POST(request: NextRequest) {
     ];
 
     // Insert demo contracts
-    const result = await db.collection('contracts').insertMany(demoContracts as any);
+    const result = await db.collection('contracts').insertMany(demoContractData as any);
 
     return NextResponse.json({
       success: true,
       message: 'デモデータを作成しました',
       insertedCount: result.insertedCount,
-      contractIds: demoContracts.map(c => c.contractId),
+      contractIds: demoContractData.map(c => c.contractId),
     });
   } catch (error) {
     console.error('Demo data creation error:', error);
+    console.error('Error details:', {
+      message: error instanceof Error ? error.message : 'Unknown error',
+      stack: error instanceof Error ? error.stack : undefined,
+    });
     return NextResponse.json(
-      { error: 'デモデータの作成に失敗しました' },
+      { 
+        error: 'デモデータの作成に失敗しました',
+        details: error instanceof Error ? error.message : 'Unknown error'
+      },
       { status: 500 }
     );
   }

@@ -22,8 +22,8 @@ class VercelKVService implements KVCache {
   }
 
   async get<T = any>(key: string): Promise<T | null> {
-    // Demo mode - return null
-    if (config.kv.isDemo) {
+    // Demo mode or invalid config - return null
+    if (config.kv.isDemo || config.isDemo) {
       return null;
     }
     
@@ -41,8 +41,8 @@ class VercelKVService implements KVCache {
     value: T,
     options?: { ex?: number }
   ): Promise<void> {
-    // Demo mode - do nothing
-    if (config.kv.isDemo) {
+    // Demo mode or invalid config - do nothing
+    if (config.kv.isDemo || config.isDemo) {
       return;
     }
     
@@ -58,6 +58,10 @@ class VercelKVService implements KVCache {
   }
 
   async del(key: string): Promise<void> {
+    if (config.kv.isDemo || config.isDemo) {
+      return;
+    }
+    
     try {
       await kv.del(this.getKey(key));
     } catch (error) {
@@ -66,6 +70,10 @@ class VercelKVService implements KVCache {
   }
 
   async exists(key: string): Promise<boolean> {
+    if (config.kv.isDemo || config.isDemo) {
+      return false;
+    }
+    
     try {
       const result = await kv.exists(this.getKey(key));
       return result === 1;
@@ -76,6 +84,10 @@ class VercelKVService implements KVCache {
   }
 
   async expire(key: string, seconds: number): Promise<void> {
+    if (config.kv.isDemo || config.isDemo) {
+      return;
+    }
+    
     try {
       await kv.expire(this.getKey(key), seconds);
     } catch (error) {
@@ -84,6 +96,10 @@ class VercelKVService implements KVCache {
   }
 
   async ttl(key: string): Promise<number> {
+    if (config.kv.isDemo || config.isDemo) {
+      return -1;
+    }
+    
     try {
       const ttl = await kv.ttl(this.getKey(key));
       return ttl;
@@ -177,7 +193,7 @@ export class RateLimiter {
     window: number = 60
   ): Promise<{ allowed: boolean; remaining: number; resetAt: number }> {
     // Demo mode - always allow
-    if (config.kv.isDemo) {
+    if (config.kv.isDemo || config.isDemo) {
       return {
         allowed: true,
         remaining: limit,

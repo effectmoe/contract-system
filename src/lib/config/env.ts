@@ -4,14 +4,14 @@ export const config = {
   // MongoDB
   mongodb: {
     uri: process.env.MONGODB_URI || 'demo-mode',
-    isDemo: !process.env.MONGODB_URI,
+    isDemo: !process.env.MONGODB_URI || process.env.MONGODB_URI === 'demo-mode' || process.env.MONGODB_URI.includes('your-cluster'),
   },
   
   // Vercel KV
   kv: {
     url: process.env.KV_REST_API_URL || 'demo-mode',
     token: process.env.KV_REST_API_TOKEN || 'demo-mode',
-    isDemo: !process.env.KV_REST_API_URL,
+    isDemo: !process.env.KV_REST_API_URL || process.env.KV_REST_API_URL.includes('your-kv-instance'),
   },
   
   // Vercel Blob
@@ -50,7 +50,10 @@ export const config = {
   },
   
   // Demo mode flag
-  isDemo: !process.env.MONGODB_URI || !process.env.KV_REST_API_URL,
+  isDemo: !process.env.MONGODB_URI || !process.env.KV_REST_API_URL || 
+          process.env.MONGODB_URI === 'demo-mode' || 
+          process.env.MONGODB_URI.includes('your-cluster') ||
+          process.env.KV_REST_API_URL.includes('your-kv-instance'),
 };
 
 // Helper to check if running in demo mode

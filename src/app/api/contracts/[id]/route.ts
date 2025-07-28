@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getContractService } from '@/lib/db/mongodb';
 import { rateLimiter } from '@/lib/db/kv';
 import { ERROR_MESSAGES, SUCCESS_MESSAGES } from '@/lib/utils/constants';
+import { config } from '@/lib/config/env';
+import { demoContracts } from '@/lib/db/demo-data';
 
 // GET /api/contracts/[id] - Get single contract
 export async function GET(
@@ -21,6 +23,22 @@ export async function GET(
     }
 
     const { id } = await params;
+    
+    // Demo mode - return mock data
+    const isActuallyDemo = !process.env.MONGODB_URI || process.env.MONGODB_URI === 'demo-mode' || process.env.MONGODB_URI.includes('your-cluster');
+    
+    if (config.isDemo || isActuallyDemo) {
+      const contract = demoContracts.find(c => c.contractId === id);
+      
+      if (!contract) {
+        return NextResponse.json(
+          { error: ERROR_MESSAGES.CONTRACT_NOT_FOUND },
+          { status: 404 }
+        );
+      }
+      
+      return NextResponse.json(contract);
+    }
     
     const contractService = await getContractService();
     const contract = await contractService['contracts'].findOne({ 

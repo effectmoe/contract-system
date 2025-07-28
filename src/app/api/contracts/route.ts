@@ -32,7 +32,9 @@ export async function GET(request: NextRequest) {
     };
 
     // Demo mode - return mock data
-    if (config.isDemo) {
+    const isActuallyDemo = !process.env.MONGODB_URI || process.env.MONGODB_URI === 'demo-mode' || process.env.MONGODB_URI.includes('your-cluster');
+    
+    if (config.isDemo || isActuallyDemo) {
       const result = {
         data: demoContracts,
         pagination: {

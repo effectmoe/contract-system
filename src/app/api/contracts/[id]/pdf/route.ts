@@ -1,8 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getContractService } from '@/lib/db/mongodb';
-import { PDFGenerator } from '@/lib/pdf/generator';
+import { generateContractPDFWithPuppeteer, generateDemoPDF } from '@/lib/pdf/puppeteer-generator';
 import { rateLimiter } from '@/lib/db/kv';
 import { ERROR_MESSAGES } from '@/lib/utils/constants';
+import { config } from '@/lib/config/env';
+import { demoContracts } from '@/lib/db/demo-data';
 
 // GET /api/contracts/[id]/pdf - Generate PDF for contract
 export async function GET(
@@ -23,37 +25,63 @@ export async function GET(
 
     const { id } = await params;
     
-    const contractService = await getContractService();
-    const contract = await contractService['contracts'].findOne({ 
-      contractId: id 
-    });
-
-    if (!contract) {
-      return NextResponse.json(
-        { error: ERROR_MESSAGES.CONTRACT_NOT_FOUND },
-        { status: 404 }
-      );
-    }
-
+    console.log('PDF generation request for contract:', id);
+    
     // Check if signatures should be included
     const includeSignatures = request.nextUrl.searchParams.get('signatures') !== 'false';
+    
+    // Demo mode対応
+    const isActuallyDemo = !process.env.MONGODB_URI || process.env.MONGODB_URI === 'demo-mode' || process.env.MONGODB_URI.includes('your-cluster');
+    
+    let contract;
+    let pdfBytes: Buffer;
+    
+    if (config.isDemo || isActuallyDemo) {
+      console.log('Running in demo mode for PDF generation');
+      contract = demoContracts.find(c => c.contractId === id);
+      
+      if (!contract) {
+        return NextResponse.json(
+          { error: ERROR_MESSAGES.CONTRACT_NOT_FOUND },
+          { status: 404 }
+        );
+      }
+      
+      // デモモードでは簡易PDF生成
+      pdfBytes = await generateDemoPDF(contract);
+    } else {
+      console.log('Running in production mode for PDF generation');
+      const contractService = await getContractService();
+      contract = await contractService['contracts'].findOne({ 
+        contractId: id 
+      });
 
-    // Generate PDF
-    const pdfGenerator = new PDFGenerator(contract, includeSignatures);
-    const pdfBytes = await pdfGenerator.generatePDF();
+      if (!contract) {
+        return NextResponse.json(
+          { error: ERROR_MESSAGES.CONTRACT_NOT_FOUND },
+          { status: 404 }
+        );
+      }
 
-    // Log PDF generation
-    await contractService['auditLogs'].create({
-      id: `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-      action: 'downloaded',
-      performedBy: 'system', // TODO: Get from auth
-      performedAt: new Date(),
-      details: { 
-        contractId: id,
-        format: 'pdf',
-        includeSignatures
-      },
-    });
+      // Puppeteerを使用したPDF生成
+      pdfBytes = await generateContractPDFWithPuppeteer(contract, includeSignatures);
+    }
+
+    // Log PDF generation (only in production mode)
+    if (!config.isDemo && !isActuallyDemo) {
+      const contractService = await getContractService();
+      await contractService['auditLogs'].create({
+        id: `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+        action: 'downloaded',
+        performedBy: 'system', // TODO: Get from auth
+        performedAt: new Date(),
+        details: { 
+          contractId: id,
+          format: 'pdf',
+          includeSignatures
+        },
+      });
+    }
 
     // Return PDF as response
     return new NextResponse(pdfBytes, {
@@ -66,8 +94,17 @@ export async function GET(
     });
   } catch (error) {
     console.error('Failed to generate PDF:', error);
+    console.error('PDF generation error details:', {
+      message: error instanceof Error ? error.message : 'Unknown error',
+      stack: error instanceof Error ? error.stack : undefined,
+      environment: process.env.NODE_ENV
+    });
+    
     return NextResponse.json(
-      { error: ERROR_MESSAGES.GENERIC },
+      { 
+        error: 'PDF生成に失敗しました',
+        details: error instanceof Error ? error.message : 'Unknown error'
+      },
       { status: 500 }
     );
   }

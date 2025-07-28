@@ -1,20 +1,37 @@
-import OpenAI from 'openai';
 import { Contract, AIAnalysis, Risk } from '@/types/contract';
 import { kvCache, CacheKeys, CacheDurations } from '@/lib/db/kv';
+import { config } from '../config/env';
 
-// DeepSeek API configuration
-const deepseek = new OpenAI({
-  apiKey: process.env.DEEPSEEK_API_KEY,
-  baseURL: process.env.DEEPSEEK_BASE_URL || 'https://api.deepseek.com/v1',
-});
+// 動的インポート用の型
+type OpenAI = any;
 
 export class DeepSeekService {
   private model: string = 'deepseek-chat';
+
+  private async getClient(): Promise<OpenAI> {
+    // デモモードの場合はnullを返す
+    if (config.ai.deepseek.isDemo || config.isDemo) {
+      throw new Error('Demo mode - AI analysis not available');
+    }
+
+    // 動的インポート
+    const { default: OpenAI } = await import('openai');
+    
+    return new OpenAI({
+      apiKey: process.env.DEEPSEEK_API_KEY,
+      baseURL: process.env.DEEPSEEK_BASE_URL || 'https://api.deepseek.com/v1',
+    });
+  }
 
   /**
    * Analyze contract content and extract key information
    */
   async analyzeContract(contract: Contract): Promise<AIAnalysis> {
+    // デモモードの場合はデモ分析を返す
+    if (config.ai.deepseek.isDemo || config.isDemo) {
+      return this.getDemoAnalysis(contract);
+    }
+
     const cacheKey = CacheKeys.aiResponse(`analyze_${contract.contractId}`);
     
     // Check cache first
@@ -24,6 +41,7 @@ export class DeepSeekService {
     }
 
     try {
+      const deepseek = await this.getClient();
       const prompt = this.buildAnalysisPrompt(contract);
       
       const response = await deepseek.chat.completions.create({
@@ -196,7 +214,19 @@ export class DeepSeekService {
    * Generate contract suggestions based on type
    */
   async generateSuggestions(contractType: string, context: Record<string, any>): Promise<string[]> {
+    // デモモードの場合はデモ提案を返す
+    if (config.ai.deepseek.isDemo || config.isDemo) {
+      return [
+        'デモモード：実際の環境では具体的な提案が生成されます',
+        '契約条項の明確化を検討してください',
+        '当事者の権利と義務を詳細に記載してください',
+        '契約期間と更新条件を明確にしてください',
+        '紛争解決条項を追加することを推奨します'
+      ];
+    }
+
     try {
+      const deepseek = await this.getClient();
       const response = await deepseek.chat.completions.create({
         model: this.model,
         messages: [
@@ -334,6 +364,37 @@ ${contract.content}
 
   private parseSuggestionsResponse(text: string): string[] {
     return this.extractListItems(text);
+  }
+
+  private getDemoAnalysis(contract: Contract): AIAnalysis {
+    return {
+      summary: `この${contract.title}は、${contract.parties.length}者間の契約であり、${contract.type}に関する内容が含まれています。デモモードで表示されています。実際の環境では、AIによる詳細な分析が実行されます。`,
+      keyTerms: [
+        '契約期間：明確に定義されています',
+        '当事者の権利と義務：詳細に記載',
+        '報酬・対価：具体的な金額設定',
+        '契約解除条件：適切に設定',
+        '守秘義務：含まれています'
+      ],
+      risks: [
+        {
+          level: 'low',
+          description: 'デモモードでは詳細なリスク分析は行われません。実際の環境では、契約内容に基づいた具体的なリスク評価が提供されます。'
+        },
+        {
+          level: 'medium',
+          description: '一般的な契約リスクとして、曖昧な表現や不完全な条項がある可能性があります。'
+        }
+      ],
+      recommendations: [
+        '実際の環境でのAI分析をご利用ください',
+        '法的専門家による最終確認を推奨します',
+        '契約条項の明確化を検討してください',
+        '定期的な契約見直しを実施してください'
+      ],
+      contractType: contract.type,
+      analyzedAt: new Date(),
+    };
   }
 }
 
