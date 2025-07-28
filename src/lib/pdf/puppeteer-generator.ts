@@ -1,16 +1,19 @@
 import { Contract } from '@/types/contract';
 import { generateContractHTML } from './contract-html-generator';
+import { generateNDAHTML } from './nda-html-generator';
+import { generateCertificateHTML } from './certificate-html-generator';
 import { config } from '../config/env';
 
 // Vercel環境用の設定 - これらのメソッドは最新版では使用しない
 
 export async function generateContractPDFWithPuppeteer(
   contract: Contract, 
-  includeSignatures: boolean = true
+  includeSignatures: boolean = true,
+  pdfType: 'contract' | 'nda' | 'certificate' = 'contract'
 ): Promise<Buffer> {
   // デモモードの場合は軽量なデモPDFを返す
   if (config.isDemo) {
-    return generateDemoPDF(contract);
+    return generateDemoPDF(contract, pdfType);
   }
   
   let browser = null;
@@ -56,9 +59,21 @@ export async function generateContractPDFWithPuppeteer(
     // ページサイズをA4に設定
     await page.setViewport({ width: 794, height: 1123 });
     
-    // HTMLコンテンツを生成
-    console.log('Generating HTML content');
-    const htmlContent = generateContractHTML(contract, includeSignatures);
+    // HTMLコンテンツを生成（PDFタイプに応じて切り替え）
+    console.log('Generating HTML content for type:', pdfType);
+    let htmlContent: string;
+    switch (pdfType) {
+      case 'nda':
+        htmlContent = generateNDAHTML(contract);
+        break;
+      case 'certificate':
+        htmlContent = generateCertificateHTML(contract);
+        break;
+      case 'contract':
+      default:
+        htmlContent = generateContractHTML(contract, includeSignatures);
+        break;
+    }
     
     // HTMLを設定
     console.log('Setting page content');
@@ -106,8 +121,8 @@ export async function generateContractPDFWithPuppeteer(
 }
 
 // デモモード用の簡易PDF生成（実際のPuppeteerを使わない）
-export async function generateDemoPDF(contract: Contract): Promise<Buffer> {
-  console.log('Generating demo PDF for contract:', contract.contractId);
+export async function generateDemoPDF(contract: Contract, pdfType: 'contract' | 'nda' | 'certificate' = 'contract'): Promise<Buffer> {
+  console.log('Generating demo PDF for contract:', contract.contractId, 'type:', pdfType);
   
   try {
     // Vercel環境でもPuppeteerを使用してHTMLからPDFを生成
@@ -132,9 +147,21 @@ export async function generateDemoPDF(contract: Contract): Promise<Buffer> {
     // ページサイズをA4に設定
     await page.setViewport({ width: 794, height: 1123 });
     
-    // HTMLコンテンツを生成（日本語フォント対応）
-    console.log('Generating HTML content with Japanese font support');
-    const htmlContent = generateContractHTML(contract, true);
+    // HTMLコンテンツを生成（日本語フォント対応、PDFタイプに応じて切り替え）
+    console.log('Generating HTML content with Japanese font support for type:', pdfType);
+    let htmlContent: string;
+    switch (pdfType) {
+      case 'nda':
+        htmlContent = generateNDAHTML(contract);
+        break;
+      case 'certificate':
+        htmlContent = generateCertificateHTML(contract);
+        break;
+      case 'contract':
+      default:
+        htmlContent = generateContractHTML(contract, true);
+        break;
+    }
     
     // HTMLを設定
     console.log('Setting page content');

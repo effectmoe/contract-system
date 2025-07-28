@@ -30,6 +30,9 @@ export async function GET(
     // Check if signatures should be included
     const includeSignatures = request.nextUrl.searchParams.get('signatures') !== 'false';
     
+    // PDFタイプを契約種別から判定
+    let pdfType: 'contract' | 'nda' | 'certificate' = 'contract';
+    
     // Demo mode対応
     const isActuallyDemo = !process.env.MONGODB_URI || process.env.MONGODB_URI === 'demo-mode' || process.env.MONGODB_URI.includes('your-cluster');
     
@@ -47,9 +50,14 @@ export async function GET(
         );
       }
       
+      // 契約種別に基づいてPDFタイプを設定
+      if (contract.type === 'nda') {
+        pdfType = 'nda';
+      }
+      
       // デモモードでは簡易PDF生成
       try {
-        pdfBytes = await generateDemoPDF(contract);
+        pdfBytes = await generateDemoPDF(contract, pdfType);
       } catch (pdfError) {
         console.error('Demo PDF generation failed:', pdfError);
         // フォールバック: 最小限のPDFを生成
@@ -91,9 +99,14 @@ export async function GET(
           { status: 404 }
         );
       }
+      
+      // 契約種別に基づいてPDFタイプを設定
+      if (contract.type === 'nda') {
+        pdfType = 'nda';
+      }
 
       // Puppeteerを使用したPDF生成
-      pdfBytes = await generateContractPDFWithPuppeteer(contract, includeSignatures);
+      pdfBytes = await generateContractPDFWithPuppeteer(contract, includeSignatures, pdfType);
     }
 
     // Log PDF generation (only in production mode)

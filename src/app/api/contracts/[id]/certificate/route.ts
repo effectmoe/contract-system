@@ -1,9 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { connectToDatabase } from '@/lib/db/mongodb';
+import { connectToDatabase, getContractService } from '@/lib/db/mongodb';
 import { Contract } from '@/types/contract';
 import { CompletionCertificate } from '@/types/certificate';
 import { createCertificateFromContract } from '@/lib/utils/certificateGenerator';
 import { generateCertificateHTML, generateCertificatePDFOptions } from '@/lib/utils/certificatePDFTemplate';
+import { generateContractPDFWithPuppeteer, generateDemoPDF } from '@/lib/pdf/puppeteer-generator';
+import { rateLimiter } from '@/lib/db/kv';
+import { ERROR_MESSAGES } from '@/lib/utils/constants';
+import { config } from '@/lib/config/env';
+import { demoContracts } from '@/lib/db/demo-data';
 import puppeteer from 'puppeteer';
 import { put } from '@vercel/blob';
 
@@ -172,38 +177,83 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
 
 export async function GET(request: NextRequest, { params }: RouteParams) {
   try {
-    const { id: contractId } = await params;
-
-    // Demo mode
-    if (!process.env.MONGODB_URI) {
-      return NextResponse.json({
-        success: false,
-        error: 'デモモードでは証明書の取得はできません',
-      });
-    }
-
-    const { db } = await connectToDatabase();
-
-    // 証明書を取得
-    const certificate = await db.collection<CompletionCertificate>('certificates').findOne({
-      contractId,
-    });
-
-    if (!certificate) {
+    const { id } = await params;
+    
+    // Rate limiting
+    const ip = request.headers.get('x-forwarded-for') || 'unknown';
+    const { allowed } = await rateLimiter.checkLimit(`api:${ip}`, 50, 60);
+    
+    if (!allowed) {
       return NextResponse.json(
-        { error: '証明書が見つかりません' },
-        { status: 404 }
+        { error: ERROR_MESSAGES.RATE_LIMIT },
+        { status: 429 }
       );
     }
+    
+    console.log('Certificate PDF generation request for contract:', id);
+    
+    // Demo mode対応
+    const isActuallyDemo = !process.env.MONGODB_URI || process.env.MONGODB_URI === 'demo-mode' || process.env.MONGODB_URI.includes('your-cluster');
+    
+    let contract;
+    let pdfBytes: Buffer;
+    
+    if (config.isDemo || isActuallyDemo) {
+      console.log('Running in demo mode for certificate PDF generation');
+      contract = demoContracts.find(c => c.contractId === id);
+      
+      if (!contract) {
+        return NextResponse.json(
+          { error: ERROR_MESSAGES.CONTRACT_NOT_FOUND },
+          { status: 404 }
+        );
+      }
+      
+      // デモモードでは証明書PDF生成
+      try {
+        pdfBytes = await generateDemoPDF(contract, 'certificate');
+      } catch (pdfError) {
+        console.error('Demo certificate PDF generation failed:', pdfError);
+        throw pdfError;
+      }
+    } else {
+      console.log('Running in production mode for certificate PDF generation');
+      const contractService = await getContractService();
+      contract = await contractService['contracts'].findOne({ 
+        contractId: id 
+      });
 
-    return NextResponse.json({
-      success: true,
-      certificate,
+      if (!contract) {
+        return NextResponse.json(
+          { error: ERROR_MESSAGES.CONTRACT_NOT_FOUND },
+          { status: 404 }
+        );
+      }
+
+      // Puppeteerを使用した証明書PDF生成
+      pdfBytes = await generateContractPDFWithPuppeteer(contract, true, 'certificate');
+    }
+
+    // Return PDF as response
+    const fileName = `合意締結証明書_${contract.title}_${new Date(contract.createdAt).toISOString().split('T')[0]}.pdf`;
+    const encodedFileName = encodeURIComponent(fileName);
+    
+    return new NextResponse(pdfBytes, {
+      status: 200,
+      headers: {
+        'Content-Type': 'application/pdf',
+        'Content-Disposition': `inline; filename*=UTF-8''${encodedFileName}; filename="certificate_${contract.contractId}.pdf"`,
+        'Cache-Control': 'no-cache, no-store, must-revalidate',
+      },
     });
   } catch (error) {
-    console.error('Certificate fetch error:', error);
+    console.error('Failed to generate certificate PDF:', error);
+    
     return NextResponse.json(
-      { error: '証明書の取得に失敗しました' },
+      { 
+        error: '証明書PDF生成に失敗しました',
+        details: error instanceof Error ? error.message : 'Unknown error'
+      },
       { status: 500 }
     );
   }
