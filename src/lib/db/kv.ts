@@ -23,7 +23,7 @@ class VercelKVService implements KVCache {
 
   async get<T = any>(key: string): Promise<T | null> {
     // Demo mode or invalid config - return null
-    if (config.kv.isDemo || config.isDemo) {
+    if (config.kv.isDemo || config.isDemo || this.isInvalidKVConfig()) {
       return null;
     }
     
@@ -36,13 +36,24 @@ class VercelKVService implements KVCache {
     }
   }
 
+  private isInvalidKVConfig(): boolean {
+    const kvUrl = process.env.KV_REST_API_URL;
+    const kvToken = process.env.KV_REST_API_TOKEN;
+    
+    if (!kvUrl || !kvToken) return true;
+    if (kvUrl.includes('your-kv-instance')) return true;
+    if (kvUrl === 'demo-mode' || kvToken === 'demo-mode') return true;
+    
+    return false;
+  }
+
   async set<T = any>(
     key: string,
     value: T,
     options?: { ex?: number }
   ): Promise<void> {
     // Demo mode or invalid config - do nothing
-    if (config.kv.isDemo || config.isDemo) {
+    if (config.kv.isDemo || config.isDemo || this.isInvalidKVConfig()) {
       return;
     }
     
@@ -187,13 +198,24 @@ export class RateLimiter {
     this.kv = new VercelKVService();
   }
 
+  private isInvalidKVConfig(): boolean {
+    const kvUrl = process.env.KV_REST_API_URL;
+    const kvToken = process.env.KV_REST_API_TOKEN;
+    
+    if (!kvUrl || !kvToken) return true;
+    if (kvUrl.includes('your-kv-instance')) return true;
+    if (kvUrl === 'demo-mode' || kvToken === 'demo-mode') return true;
+    
+    return false;
+  }
+
   async checkLimit(
     key: string,
     limit: number,
     window: number = 60
   ): Promise<{ allowed: boolean; remaining: number; resetAt: number }> {
-    // Demo mode - always allow
-    if (config.kv.isDemo || config.isDemo) {
+    // Demo mode or invalid config - always allow
+    if (config.kv.isDemo || config.isDemo || this.isInvalidKVConfig()) {
       return {
         allowed: true,
         remaining: limit,

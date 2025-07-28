@@ -11,7 +11,11 @@ export const config = {
   kv: {
     url: process.env.KV_REST_API_URL || 'demo-mode',
     token: process.env.KV_REST_API_TOKEN || 'demo-mode',
-    isDemo: !process.env.KV_REST_API_URL || process.env.KV_REST_API_URL.includes('your-kv-instance'),
+    isDemo: !process.env.KV_REST_API_URL || 
+            process.env.KV_REST_API_URL === 'demo-mode' ||
+            process.env.KV_REST_API_URL?.includes('your-kv-instance') ||
+            !process.env.KV_REST_API_TOKEN ||
+            process.env.KV_REST_API_TOKEN === 'demo-mode',
   },
   
   // Vercel Blob
@@ -52,8 +56,9 @@ export const config = {
   // Demo mode flag
   isDemo: !process.env.MONGODB_URI || !process.env.KV_REST_API_URL || 
           process.env.MONGODB_URI === 'demo-mode' || 
-          process.env.MONGODB_URI.includes('your-cluster') ||
-          process.env.KV_REST_API_URL.includes('your-kv-instance'),
+          process.env.MONGODB_URI?.includes('your-cluster') ||
+          process.env.KV_REST_API_URL?.includes('your-kv-instance') ||
+          process.env.KV_REST_API_URL?.includes('demo-mode'),
 };
 
 // Helper to check if running in demo mode
