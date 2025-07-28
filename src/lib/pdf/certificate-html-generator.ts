@@ -15,16 +15,16 @@ export function generateCertificateHTML(contract: Contract): string {
       
       @page {
         size: A4;
-        margin: 20mm;
+        margin: 15mm;
       }
       
       body {
         font-family: 'Noto Sans JP', 'Hiragino Sans', 'Hiragino Kaku Gothic ProN', 'Meiryo', sans-serif;
-        font-size: 11pt;
-        line-height: 1.8;
+        font-size: 10pt;
+        line-height: 1.6;
         color: #333;
         background: white;
-        padding: 20px;
+        padding: 10px;
       }
       
       .certificate-container {
@@ -35,27 +35,27 @@ export function generateCertificateHTML(contract: Contract): string {
       /* ヘッダー */
       .header {
         text-align: center;
-        margin-bottom: 40px;
+        margin-bottom: 30px;
       }
       
       .header h1 {
-        font-size: 24pt;
+        font-size: 22pt;
         font-weight: 700;
         color: #000;
         letter-spacing: 0.2em;
-        margin-bottom: 30px;
+        margin-bottom: 20px;
       }
       
       /* 契約書情報セクション */
       .contract-info-section {
-        margin-bottom: 40px;
+        margin-bottom: 30px;
       }
       
       .section-title {
-        font-size: 16pt;
+        font-size: 14pt;
         font-weight: 700;
         color: #000;
-        margin-bottom: 20px;
+        margin-bottom: 15px;
         padding-bottom: 5px;
         border-bottom: 2px solid #000;
       }
@@ -67,7 +67,7 @@ export function generateCertificateHTML(contract: Contract): string {
       
       .info-row {
         display: flex;
-        margin-bottom: 12px;
+        margin-bottom: 8px;
         align-items: flex-start;
       }
       
@@ -86,41 +86,41 @@ export function generateCertificateHTML(contract: Contract): string {
       
       /* 合意締結当事者セクション */
       .parties-section {
-        margin-bottom: 40px;
-      }
-      
-      .party-container {
         margin-bottom: 30px;
       }
       
+      .party-container {
+        margin-bottom: 20px;
+      }
+      
       .party-type {
-        font-size: 14pt;
+        font-size: 13pt;
         font-weight: 700;
         color: #000;
-        margin-bottom: 15px;
+        margin-bottom: 10px;
       }
       
       .party-box {
         background: #f8f8f8;
-        padding: 20px;
+        padding: 15px;
         border-left: 4px solid #333;
-        margin-bottom: 20px;
+        margin-bottom: 15px;
       }
       
       .party-name {
-        font-size: 12pt;
+        font-size: 11pt;
         font-weight: 500;
-        margin-bottom: 8px;
+        margin-bottom: 5px;
       }
       
       .party-details {
-        font-size: 10pt;
+        font-size: 9pt;
         color: #555;
-        line-height: 1.6;
+        line-height: 1.5;
       }
       
       .party-details div {
-        margin-bottom: 3px;
+        margin-bottom: 2px;
       }
       
       /* 2列レイアウト用 */
@@ -145,8 +145,8 @@ export function generateCertificateHTML(contract: Contract): string {
       
       /* フッター */
       .footer {
-        margin-top: 60px;
-        padding-top: 20px;
+        margin-top: 40px;
+        padding-top: 15px;
         border-top: 1px solid #ccc;
         text-align: center;
         font-size: 9pt;
@@ -154,8 +154,8 @@ export function generateCertificateHTML(contract: Contract): string {
       }
       
       .footer-note {
-        margin-bottom: 20px;
-        font-size: 10pt;
+        margin-bottom: 15px;
+        font-size: 9pt;
         color: #333;
       }
       
@@ -163,19 +163,7 @@ export function generateCertificateHTML(contract: Contract): string {
         margin-bottom: 5px;
       }
       
-      /* ロゴエリア（プレースホルダー） */
-      .logo-area {
-        display: inline-block;
-        width: 60px;
-        height: 60px;
-        border: 2px solid #ccc;
-        border-radius: 50%;
-        line-height: 56px;
-        text-align: center;
-        font-weight: 700;
-        color: #666;
-        margin-bottom: 10px;
-      }
+      /* ロゴエリア（削除） */
       
       /* ステータスバッジ */
       .status-badge {
@@ -271,7 +259,6 @@ export function generateCertificateHTML(contract: Contract): string {
       <div class="certificate-container">
         <!-- ヘッダー -->
         <div class="header">
-          <div class="logo-area">契</div>
           <h1>合意締結証明書</h1>
         </div>
 
