@@ -3,9 +3,7 @@ import { FileText, PenTool, Shield, Search, BarChart3, Clock } from 'lucide-reac
 
 export default function Home() {
   return (
-    <>
-      <link rel="stylesheet" href="/css/styles.css" />
-      <div className="min-h-screen bg-gradient-to-b from-blue-50 to-white">
+    <div className="min-h-screen bg-gradient-to-b from-blue-50 to-white">
       {/* Hero Section */}
       <div className="container mx-auto px-4 py-16">
         <div className="text-center mb-12">
@@ -125,6 +123,5 @@ export default function Home() {
         </div>
       </div>
     </div>
-    </>
   );
 }

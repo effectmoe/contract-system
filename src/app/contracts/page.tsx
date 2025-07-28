@@ -8,12 +8,9 @@ export const metadata = {
 
 export default function ContractsPage() {
   return (
-    <>
-      <link rel="stylesheet" href="/css/styles.css" />
     <div className="min-h-screen bg-gray-50">
       <Header />
       <ContractDashboard />
     </div>
-    </>
   );
 }

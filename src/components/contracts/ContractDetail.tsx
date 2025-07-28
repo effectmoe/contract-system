@@ -13,6 +13,7 @@ import { formatDate } from '@/lib/utils/helpers';
 import PDFViewer from './PDFViewer';
 import SignatureCapture from './SignatureCapture';
 import AIChat from './AIChat';
+import ChatWidget from './ChatWidget';
 
 interface ContractDetailProps {
   contractId: string;
@@ -465,5 +466,8 @@ export default function ContractDetail({ contractId }: ContractDetailProps) {
         </div>
       )}
     </div>
+
+    {/* Chat Widget */}
+    <ChatWidget contract={contract} />
   );
 }
