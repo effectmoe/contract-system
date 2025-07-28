@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { 
   FileText, Plus, Search, Filter, Calendar, Clock, 
-  CheckCircle, XCircle, AlertCircle, ChevronRight 
+  CheckCircle, XCircle, AlertCircle, ChevronRight, Database 
 } from 'lucide-react';
 import { Contract, ContractStatus } from '@/types/contract';
 import { CONTRACT_STATUS_LABELS, STATUS_COLORS } from '@/lib/utils/constants';
@@ -29,6 +29,7 @@ export default function ContractDashboard() {
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<ContractStatus | 'all'>('all');
   const [loading, setLoading] = useState(true);
+  const [creatingDemoData, setCreatingDemoData] = useState(false);
 
   useEffect(() => {
     fetchContracts();
@@ -72,6 +73,31 @@ export default function ContractDashboard() {
     });
 
     setStats(newStats);
+  };
+
+  const createDemoData = async () => {
+    setCreatingDemoData(true);
+    try {
+      const response = await fetch('/api/demo/seed', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+
+      const data = await response.json();
+      
+      if (response.ok) {
+        alert('デモデータを作成しました！');
+        await fetchContracts(); // データを再読み込み
+      } else {
+        alert(`エラー: ${data.error || 'デモデータの作成に失敗しました'}`);
+      }
+    } catch (error) {
+      alert('デモデータの作成に失敗しました');
+    } finally {
+      setCreatingDemoData(false);
+    }
   };
 
   const filteredContracts = contracts.filter(contract => {
@@ -132,10 +158,26 @@ export default function ContractDashboard() {
       {/* Header */}
       <div className="flex justify-between items-center mb-8">
         <h1 className="text-3xl font-bold text-gray-900">契約書ダッシュボード</h1>
-        <Link href="/contracts/new" className="btn-primary flex items-center gap-2">
-          <Plus className="w-4 h-4" />
-          新規契約書作成
-        </Link>
+        <div className="flex gap-3">
+          {stats.total === 0 && (
+            <button
+              onClick={createDemoData}
+              disabled={creatingDemoData}
+              className="btn-secondary flex items-center gap-2"
+            >
+              {creatingDemoData ? (
+                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-gray-600"></div>
+              ) : (
+                <Database className="w-4 h-4" />
+              )}
+              デモデータ作成
+            </button>
+          )}
+          <Link href="/contracts/new" className="btn-primary flex items-center gap-2">
+            <Plus className="w-4 h-4" />
+            新規契約書作成
+          </Link>
+        </div>
       </div>
 
       {/* Stats Cards */}
@@ -230,7 +272,21 @@ export default function ContractDashboard() {
       <div className="space-y-4">
         {filteredContracts.length === 0 ? (
           <div className="card text-center py-12">
-            <p className="text-gray-500">契約書が見つかりませんでした</p>
+            <p className="text-gray-500 mb-4">契約書が見つかりませんでした</p>
+            {contracts.length === 0 && (
+              <button
+                onClick={createDemoData}
+                disabled={creatingDemoData}
+                className="btn-primary flex items-center gap-2 mx-auto"
+              >
+                {creatingDemoData ? (
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                ) : (
+                  <Database className="w-4 h-4" />
+                )}
+                デモデータを作成
+              </button>
+            )}
           </div>
         ) : (
           filteredContracts.map((contract) => (
