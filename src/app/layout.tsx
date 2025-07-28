@@ -29,9 +29,6 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="ja" className={`${inter.variable} ${notoSansJP.variable}`}>
-      <head>
-        <link rel="stylesheet" href="/css/styles.css" />
-      </head>
       <body className="font-sans antialiased bg-gray-50 text-gray-900">
         {children}
       </body>

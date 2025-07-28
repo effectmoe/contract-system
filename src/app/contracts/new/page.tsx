@@ -8,11 +8,14 @@ export const metadata = {
 
 export default function NewContractPage() {
   return (
+    <>
+      <link rel="stylesheet" href="/css/styles.css" />
     <div className="min-h-screen bg-gray-50">
       <Header />
       <div className="container mx-auto px-4 py-8">
         <ContractCreator />
       </div>
     </div>
+    </>
   );
 }
