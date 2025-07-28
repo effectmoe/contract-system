@@ -465,9 +465,9 @@ export default function ContractDetail({ contractId }: ContractDetailProps) {
           </div>
         </div>
       )}
+      
+      {/* Chat Widget */}
+      <ChatWidget contract={contract} />
     </div>
-
-    {/* Chat Widget */}
-    <ChatWidget contract={contract} />
   );
 }
