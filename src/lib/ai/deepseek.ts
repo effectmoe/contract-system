@@ -86,6 +86,7 @@ export class DeepSeekService {
     }
 
     try {
+      const deepseek = await this.getClient();
       const response = await deepseek.chat.completions.create({
         model: this.model,
         messages: [
@@ -123,6 +124,7 @@ export class DeepSeekService {
         ? `あなたは契約書に関する質問に答えるAIアシスタントです。以下の契約内容に基づいて回答してください:\n\n${context}`
         : 'あなたは契約書に関する質問に答えるAIアシスタントです。';
 
+      const deepseek = await this.getClient();
       const response = await deepseek.chat.completions.create({
         model: this.model,
         messages: [
@@ -152,6 +154,7 @@ export class DeepSeekService {
   async extractClauses(content: string, clauseTypes: string[]): Promise<Record<string, string>> {
     try {
       const clauseList = clauseTypes.join('、');
+      const deepseek = await this.getClient();
       
       const response = await deepseek.chat.completions.create({
         model: this.model,
@@ -186,6 +189,7 @@ export class DeepSeekService {
     recommendation: string;
   }> {
     try {
+      const deepseek = await this.getClient();
       const response = await deepseek.chat.completions.create({
         model: this.model,
         messages: [

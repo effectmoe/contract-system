@@ -19,7 +19,7 @@ export class PDFGenerator {
     // Register fontkit
     pdfDoc.registerFontkit(fontkit);
 
-    // Embed fonts
+    // Embed fonts - 日本語対応のためHelveticaを使用（完全な日本語フォントは別途必要）
     const helveticaFont = await pdfDoc.embedFont(StandardFonts.Helvetica);
     const helveticaBoldFont = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
 
@@ -37,7 +37,7 @@ export class PDFGenerator {
     let yPosition = height - 50;
 
     // Header
-    page.drawText('電子契約書', {
+    page.drawText('Electronic Contract', {
       x: 50,
       y: yPosition,
       size: 24,
@@ -47,7 +47,7 @@ export class PDFGenerator {
     yPosition -= 40;
 
     // Contract ID and metadata
-    page.drawText(`契約書ID: ${this.contract.contractId}`, {
+    page.drawText(`Contract ID: ${this.contract.contractId}`, {
       x: 50,
       y: yPosition,
       size: 10,
@@ -56,7 +56,7 @@ export class PDFGenerator {
     });
     yPosition -= 15;
 
-    page.drawText(`作成日: ${formatDate(this.contract.createdAt)}`, {
+    page.drawText(`Created: ${formatDate(this.contract.createdAt)}`, {
       x: 50,
       y: yPosition,
       size: 10,
@@ -76,7 +76,7 @@ export class PDFGenerator {
     yPosition -= 40;
 
     // Parties information
-    page.drawText('契約当事者', {
+    page.drawText('Contracting Parties', {
       x: 50,
       y: yPosition,
       size: 14,
@@ -86,7 +86,7 @@ export class PDFGenerator {
     yPosition -= 20;
 
     for (const party of this.contract.parties) {
-      const roleText = party.type === 'contractor' ? '甲' : '乙';
+      const roleText = party.type === 'contractor' ? 'Party A' : 'Party B';
       page.drawText(`${roleText}: ${party.name}`, {
         x: 70,
         y: yPosition,
@@ -97,7 +97,7 @@ export class PDFGenerator {
       yPosition -= 15;
 
       if (party.company) {
-        page.drawText(`会社: ${party.company}`, {
+        page.drawText(`Company: ${party.company}`, {
           x: 90,
           y: yPosition,
           size: 10,
@@ -107,7 +107,7 @@ export class PDFGenerator {
         yPosition -= 15;
       }
 
-      page.drawText(`メール: ${party.email}`, {
+      page.drawText(`Email: ${party.email}`, {
         x: 90,
         y: yPosition,
         size: 10,
@@ -119,7 +119,7 @@ export class PDFGenerator {
 
     // Contract content
     yPosition -= 20;
-    page.drawText('契約内容', {
+    page.drawText('Contract Content', {
       x: 50,
       y: yPosition,
       size: 14,
@@ -158,7 +158,7 @@ export class PDFGenerator {
         yPosition = height - 50;
       }
 
-      page.drawText('電子署名', {
+      page.drawText('Electronic Signatures', {
         x: 50,
         y: yPosition,
         size: 14,
@@ -232,7 +232,7 @@ export class PDFGenerator {
     });
 
     // Signature date
-    page.drawText(`署名日時: ${formatDate(signature.signedAt, true)}`, {
+    page.drawText(`Signed at: ${formatDate(signature.signedAt, true)}`, {
       x: 70,
       y: yPosition - 20,
       size: 10,
@@ -241,7 +241,7 @@ export class PDFGenerator {
     });
 
     // Verification hash
-    page.drawText(`検証ハッシュ: ${signature.verificationHash.substring(0, 32)}...`, {
+    page.drawText(`Verification Hash: ${signature.verificationHash.substring(0, 32)}...`, {
       x: 70,
       y: yPosition - 35,
       size: 8,
@@ -269,7 +269,7 @@ export class PDFGenerator {
 
     for (const page of pages) {
       const { width, height } = page.getSize();
-      page.drawText('下書き', {
+      page.drawText('DRAFT', {
         x: width / 2 - 100,
         y: height / 2,
         size: 72,
@@ -294,7 +294,7 @@ export class PDFGenerator {
     });
 
     const helveticaFont = await page.doc.embedFont(StandardFonts.Helvetica);
-    page.drawText('検証用QR', {
+    page.drawText('Verify QR', {
       x: x + 10,
       y: y + 35,
       size: 10,
@@ -309,7 +309,7 @@ export class PDFGenerator {
 
     // Legal compliance notice
     page.drawText(
-      'この契約書は電子帳簿保存法及び電子署名法に準拠して作成されています',
+      'This contract is created in compliance with e-Documentation and e-Signature laws',
       {
         x: 50,
         y: 30,

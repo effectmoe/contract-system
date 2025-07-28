@@ -109,21 +109,30 @@ export async function generateContractPDFWithPuppeteer(
 export async function generateDemoPDF(contract: Contract): Promise<Buffer> {
   console.log('Generating demo PDF for contract:', contract.contractId);
   
-  const htmlContent = generateContractHTML(contract, true);
+  // pdf-libを使用して実際のPDFを生成
+  const { PDFGenerator } = await import('./generator');
+  const generator = new PDFGenerator(contract, true);
   
-  // デモ用の簡単なPDFコンテンツ（HTMLテキスト）
-  const demoText = `
-PDF Demo Mode - Contract: ${contract.title}
+  try {
+    const pdfBytes = await generator.generatePDF();
+    return Buffer.from(pdfBytes);
+  } catch (error) {
+    console.error('Demo PDF generation error:', error);
+    
+    // フォールバック: エラーの場合は簡易テキストを返す
+    const fallbackText = `
+PDF Generation Error - Contract: ${contract.title}
 Contract ID: ${contract.contractId}
 Created: ${new Date(contract.createdAt).toLocaleDateString('ja-JP')}
 
-This is a demo PDF. In production mode, a full PDF would be generated using Puppeteer.
+Error: ${error instanceof Error ? error.message : 'Unknown error'}
 
 Contract Content:
 ${contract.content}
 
 Generated at: ${new Date().toISOString()}
-  `;
-  
-  return Buffer.from(demoText, 'utf-8');
+    `;
+    
+    return Buffer.from(fallbackText, 'utf-8');
+  }
 }
