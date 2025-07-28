@@ -31,7 +31,8 @@ export async function POST(request: NextRequest) {
           { expiresIn: '24h' }
         );
 
-        cookies().set('contract-viewer-session', sessionToken, {
+        const cookieStore = cookies();
+        cookieStore.set('contract-viewer-session', sessionToken, {
           httpOnly: true,
           secure: process.env.NODE_ENV === 'production',
           sameSite: 'lax',
@@ -102,7 +103,8 @@ export async function POST(request: NextRequest) {
     );
 
     // Set session cookie
-    cookies().set('contract-viewer-session', sessionToken, {
+    const cookieStore = cookies();
+    cookieStore.set('contract-viewer-session', sessionToken, {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
       sameSite: 'lax',
