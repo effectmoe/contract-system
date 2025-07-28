@@ -119,6 +119,11 @@ export class DeepSeekService {
    * Chat with AI about contract
    */
   async chat(contractId: string, message: string, context?: string): Promise<string> {
+    // デモモードの場合はデモ応答を返す
+    if (config.ai.deepseek.isDemo || config.isDemo) {
+      return this.getDemoChatResponse(message, context);
+    }
+
     try {
       const systemPrompt = context 
         ? `あなたは契約書に関する質問に答えるAIアシスタントです。以下の契約内容に基づいて回答してください:\n\n${context}`
@@ -399,6 +404,95 @@ ${contract.content}
       contractType: contract.type,
       analyzedAt: new Date(),
     };
+  }
+
+  private getDemoChatResponse(message: string, context?: string): string {
+    // 契約書の内容から関連情報を抽出
+    let contractInfo = '';
+    if (context) {
+      // 契約書タイトルを抽出
+      const titleMatch = context.match(/契約書タイトル:\s*([^\n]+)/);
+      const title = titleMatch ? titleMatch[1] : '契約書';
+      
+      // 契約内容から重要な情報を抽出
+      const contentMatch = context.match(/契約内容:\s*([\s\S]*?)(?=\n\n|$)/);
+      const content = contentMatch ? contentMatch[1].substring(0, 200) : '';
+      
+      contractInfo = `「${title}」について、`;
+    }
+
+    // 質問の内容に応じてデモ応答を生成
+    const lowerMessage = message.toLowerCase();
+    
+    if (lowerMessage.includes('消費税') || lowerMessage.includes('税')) {
+      return `${contractInfo}消費税に関するご質問ですね。
+
+この契約書では、商品名「サンプル製品A」、数量1000個、単価5,000円の売買契約において、総額5,000,000円という記載があります。
+
+消費税の取り扱いについて：
+• 総額5,000,000円が税込み価格か税抜き価格か明確にする必要があります
+• 一般的に、消費税は別途表示されることが推奨されます
+• 現在の消費税率10%を適用する場合、税抜き4,545,455円＋消費税454,545円となります
+
+**デモモード**：実際の環境では、契約書の具体的な記載内容に基づいて、より詳細な法的分析を提供いたします。重要な税務事項については税理士にご相談ください。`;
+    }
+    
+    if (lowerMessage.includes('期間') || lowerMessage.includes('期限')) {
+      return `${contractInfo}契約期間に関するご質問ですね。
+
+この契約書では「甲は2024年3月31日までに商品を納入する」という記載があります。
+
+期間に関する法的ポイント：
+• 納期の明確な設定により、双方の義務が明確になっています
+• 2024年3月31日が確定日付として設定されています
+• 遅延時の責任や損害賠償についても検討が必要です
+
+**デモモード**：実際の環境では、契約書の具体的な期間条項を詳細に分析し、関連する民法上の規定や判例に基づいた専門的なアドバイスを提供いたします。`;
+    }
+    
+    if (lowerMessage.includes('リスク') || lowerMessage.includes('問題')) {
+      return `${contractInfo}契約上のリスクについてご質問いただきました。
+
+この売買契約における主なリスク要因：
+
+**納期リスク**
+• 2024年3月31日までの納入義務が設定されています
+• 遅延時の損害賠償条項の確認が必要です
+
+**品質リスク**
+• 商品の品質基準や検査方法の明記が重要です
+• 不良品の場合の責任分担を明確にすべきです
+
+**支払いリスク**
+• 代金支払い条件の詳細確認が必要です
+• 分割支払いや前払いの条件があれば注意が必要です
+
+**デモモード**：実際の環境では、契約書全体を精査し、民法・商法の規定に照らして具体的なリスク評価と対策を提案いたします。`;
+    }
+
+    // 一般的な応答
+    return `${contractInfo}ご質問いただきありがとうございます。
+
+この契約書「ABC商事との売買契約」についてお答えいたします。
+
+**契約の概要**
+• 売主：株式会社サンプル（甲）
+• 買主：ABC商事株式会社（乙）
+• 商品：サンプル製品A 1000個
+• 単価：5,000円
+• 総額：5,000,000円
+• 納期：2024年3月31日まで
+
+**デモモードでの制限事項**
+現在デモモードで動作しているため、実際のAI分析機能は制限されています。本番環境では以下の機能をご利用いただけます：
+
+• 契約書の詳細な法的分析
+• 関連法令・判例の自動参照
+• リスク評価と対策提案
+• コンプライアンスチェック
+• 印紙税等の税務計算
+
+より具体的なご質問がございましたら、お気軽にお聞かせください。重要な法的判断については、必ず法律専門家にご相談いただくことをお勧めします。`;
   }
 }
 

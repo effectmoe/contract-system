@@ -134,7 +134,7 @@ export class ContractRAGService {
       }
 
       // DeepSeekを使用して法務特化型の回答を生成
-      const response = await this.generateLegalResponse(message, enhancedContext, isContractSpecific);
+      const response = await this.generateLegalResponse(message, enhancedContext, isContractSpecific, context);
       
       // 回答の信頼度を計算
       const confidence = this.calculateResponseConfidence(response, references);
@@ -443,7 +443,7 @@ export class ContractRAGService {
     return suggestions;
   }
 
-  private async generateLegalResponse(message: string, context: string, isContractSpecific: boolean = false): Promise<string> {
+  private async generateLegalResponse(message: string, context: string, isContractSpecific: boolean = false, contractContext?: Contract): Promise<string> {
     let systemPrompt = `あなたは日本の法律に精通した契約書専門のAIアシスタントです。以下のコンテキストに基づいて、正確で実用的な法的アドバイスを提供してください。`;
 
     if (isContractSpecific) {
@@ -472,6 +472,7 @@ ${context}`;
     try {
       return await deepSeekService.chat('legal_chat', message, systemPrompt);
     } catch (error) {
+      console.error('Legal response generation error:', error);
       return '申し訳ございませんが、回答の生成中にエラーが発生しました。専門家にご相談いただくことをお勧めします。';
     }
   }
