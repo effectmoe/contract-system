@@ -1,6 +1,5 @@
-import type { Config } from 'tailwindcss'
-
-const config: Config = {
+/** @type {import('tailwindcss').Config} */
+module.exports = {
   content: [
     './src/pages/**/*.{js,ts,jsx,tsx,mdx}',
     './src/components/**/*.{js,ts,jsx,tsx,mdx}',
@@ -8,11 +7,6 @@ const config: Config = {
   ],
   theme: {
     extend: {
-      colors: {
-        background: 'hsl(var(--background))',
-        foreground: 'hsl(var(--foreground))',
-        border: 'hsl(var(--border))',
-      },
       fontFamily: {
         sans: ['var(--font-inter)', 'var(--font-noto-sans-jp)', 'sans-serif'],
       },
@@ -20,5 +14,3 @@ const config: Config = {
   },
   plugins: [],
 }
-
-export default config
