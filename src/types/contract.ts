@@ -47,6 +47,7 @@ export interface ContractParty {
   company?: string;
   role: string;
   signatureRequired: boolean;
+  address?: string; // 住所を追加
   signedAt?: Date;
 }
 
