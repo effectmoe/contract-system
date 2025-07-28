@@ -3,6 +3,7 @@ import { connectToDatabase } from '@/lib/db/mongodb';
 import { z } from 'zod';
 import crypto from 'crypto';
 import { AccessToken } from '@/types/auth';
+import { Resend } from 'resend';
 
 const requestSchema = z.object({
   contractId: z.string(),
@@ -53,18 +54,64 @@ export async function POST(request: NextRequest) {
     
     console.log('Magic link generated:', magicLink);
 
-    // Here you would send the actual email
-    // await sendEmail({
-    //   to: email,
-    //   subject: `契約書「${contract?.title}」の確認`,
-    //   html: `
-    //     <p>${name}様</p>
-    //     <p>契約書の確認依頼が届いています。</p>
-    //     <p>以下のリンクから契約書を確認できます：</p>
-    //     <a href="${magicLink}">契約書を確認する</a>
-    //     <p>このリンクは24時間有効です。</p>
-    //   `
-    // });
+    // Resendを使用してメール送信
+    if (process.env.RESEND_API_KEY) {
+      try {
+        const resend = new Resend(process.env.RESEND_API_KEY);
+        
+        const { data, error: resendError } = await resend.emails.send({
+          from: 'Contract System <onboarding@resend.dev>',
+          to: [email],
+          subject: `契約書「${contract?.title || 'タイトル未設定'}」の確認依頼`,
+          html: `
+            <!DOCTYPE html>
+            <html>
+            <head>
+              <meta charset="utf-8">
+              <style>
+                body { font-family: 'Helvetica Neue', Arial, sans-serif; line-height: 1.6; color: #333; }
+                .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+                .header { background-color: #2563eb; color: white; padding: 20px; text-align: center; }
+                .content { padding: 20px; background-color: #f8f9fa; }
+                .button { display: inline-block; padding: 12px 24px; background-color: #2563eb; color: white; text-decoration: none; border-radius: 5px; margin: 20px 0; }
+                .footer { padding: 20px; text-align: center; font-size: 12px; color: #666; }
+              </style>
+            </head>
+            <body>
+              <div class="container">
+                <div class="header">
+                  <h1>契約書の確認依頼</h1>
+                </div>
+                <div class="content">
+                  <p>${name}様</p>
+                  <p>契約書「<strong>${contract?.title || 'タイトル未設定'}</strong>」の確認依頼が届いています。</p>
+                  <p>以下のボタンをクリックして、契約書の内容を確認し、電子署名を行ってください。</p>
+                  <p style="text-align: center;">
+                    <a href="${magicLink}" class="button">契約書を確認する</a>
+                  </p>
+                  <p><small>このリンクは24時間有効です。期限を過ぎた場合は、送信者に再送を依頼してください。</small></p>
+                </div>
+                <div class="footer">
+                  <p>このメールは電子契約システムから自動送信されています。</p>
+                  <p>© 2025 Contract System by tonychustudio</p>
+                </div>
+              </div>
+            </body>
+            </html>
+          `,
+        });
+
+        if (resendError) {
+          console.error('Resend error:', resendError);
+          // Resendエラーでもデモモードとして継続
+        } else {
+          console.log('Email sent successfully:', data);
+        }
+      } catch (emailError) {
+        console.error('Email sending error:', emailError);
+        // メール送信エラーでもシステムは継続
+      }
+    }
 
     return NextResponse.json({
       success: true,
