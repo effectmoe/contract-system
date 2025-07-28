@@ -110,12 +110,72 @@ export async function generateDemoPDF(contract: Contract): Promise<Buffer> {
   console.log('Generating demo PDF for contract:', contract.contractId);
   
   try {
-    // jsPDFを使用した簡易PDF生成を使用
-    const { generateSimplePDF } = await import('./simple-pdf-generator');
-    return await generateSimplePDF(contract);
+    // Vercel環境でもPuppeteerを使用してHTMLからPDFを生成
+    console.log('Using Puppeteer for demo PDF generation');
+    
+    // Puppeteer関連のパッケージを動的インポート
+    const [chromium, puppeteer] = await Promise.all([
+      import('@sparticuz/chromium'),
+      import('puppeteer-core')
+    ]);
+    
+    // Chromiumの設定
+    const browser = await puppeteer.default.launch({
+      args: chromium.default.args,
+      executablePath: await chromium.default.executablePath(),
+      headless: true,
+    });
+    
+    console.log('Browser launched successfully in demo mode');
+    const page = await browser.newPage();
+    
+    // ページサイズをA4に設定
+    await page.setViewport({ width: 794, height: 1123 });
+    
+    // HTMLコンテンツを生成（日本語フォント対応）
+    console.log('Generating HTML content with Japanese font support');
+    const htmlContent = generateContractHTML(contract, true);
+    
+    // HTMLを設定
+    console.log('Setting page content');
+    await page.setContent(htmlContent, {
+      waitUntil: 'networkidle0',
+      timeout: 30000
+    });
+    
+    // フォントが読み込まれるまで待機
+    await new Promise(resolve => setTimeout(resolve, 3000));
+    
+    console.log('Generating PDF with Japanese content');
+    // PDFを生成（日本語も正しく表示される）
+    const pdfBuffer = await page.pdf({
+      format: 'A4',
+      printBackground: true,
+      preferCSSPageSize: true,
+      margin: {
+        top: '20mm',
+        right: '20mm',
+        bottom: '20mm',
+        left: '20mm'
+      },
+      timeout: 30000
+    });
+    
+    await browser.close();
+    console.log('Demo PDF generated successfully with Japanese support, size:', pdfBuffer.length, 'bytes');
+    return Buffer.from(pdfBuffer);
     
   } catch (error) {
     console.error('Demo PDF generation error:', error);
-    throw error;
+    
+    // フォールバック: jsPDFを使用
+    try {
+      console.log('Falling back to jsPDF');
+      const { generateSimplePDF } = await import('./simple-pdf-generator');
+      return await generateSimplePDF(contract);
+    } catch (fallbackError) {
+      console.error('Fallback PDF generation also failed:', fallbackError);
+      throw error;
+    }
   }
 }
