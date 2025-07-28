@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { 
   FileText, Download, Edit, Send, Shield, MessageSquare, 
   Brain, Calendar, Users, AlertCircle, CheckCircle,
-  ChevronLeft, Loader
+  ChevronLeft, Loader, Award
 } from 'lucide-react';
 import { Contract } from '@/types/contract';
 import { CONTRACT_STATUS_LABELS, CONTRACT_TYPE_LABELS, STATUS_COLORS } from '@/lib/utils/constants';
@@ -27,6 +27,7 @@ export default function ContractDetail({ contractId }: ContractDetailProps) {
   const [activeTab, setActiveTab] = useState<'detail' | 'pdf' | 'signature' | 'ai'>('detail');
   const [showSignature, setShowSignature] = useState(false);
   const [analyzing, setAnalyzing] = useState(false);
+  const [generatingCertificate, setGeneratingCertificate] = useState(false);
 
   useEffect(() => {
     fetchContract();
@@ -138,6 +139,65 @@ export default function ContractDetail({ contractId }: ContractDetailProps) {
     }
   };
 
+  const handleGenerateCertificate = async () => {
+    if (!contract) return;
+    
+    setGeneratingCertificate(true);
+    try {
+      const response = await fetch(`/api/contracts/${contractId}/certificate`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error('証明書の生成に失敗しました');
+      }
+
+      const data = await response.json();
+      
+      if (data.pdfUrl) {
+        // PDF URLが返された場合はダウンロード
+        const link = document.createElement('a');
+        link.href = data.pdfUrl;
+        link.download = `合意締結証明書_${contract.contractId}.pdf`;
+        link.click();
+      }
+      
+      alert('証明書を生成しました');
+    } catch (err) {
+      alert('証明書の生成に失敗しました');
+    } finally {
+      setGeneratingCertificate(false);
+    }
+  };
+
+  const handleDownloadCertificate = async () => {
+    if (!contract) return;
+    
+    try {
+      const response = await fetch(`/api/contracts/${contractId}/certificate`);
+      
+      if (!response.ok) {
+        throw new Error('証明書が見つかりません');
+      }
+
+      const data = await response.json();
+      
+      if (data.certificate?.pdfUrl) {
+        const link = document.createElement('a');
+        link.href = data.certificate.pdfUrl;
+        link.download = `合意締結証明書_${contract.contractId}.pdf`;
+        link.click();
+      } else {
+        alert('証明書のPDFが生成されていません');
+      }
+    } catch (err) {
+      alert('証明書のダウンロードに失敗しました');
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
@@ -212,6 +272,22 @@ export default function ContractDetail({ contractId }: ContractDetailProps) {
                 編集
               </button>
             )}
+            
+            {contract.status === 'completed' && (
+              <button
+                onClick={handleGenerateCertificate}
+                disabled={generatingCertificate}
+                className="btn-secondary flex items-center gap-2"
+              >
+                {generatingCertificate ? (
+                  <Loader className="w-4 h-4 animate-spin" />
+                ) : (
+                  <Award className="w-4 h-4" />
+                )}
+                証明書生成
+              </button>
+            )}
+            
             <a
               href={`/api/contracts/${contractId}/pdf`}
               download

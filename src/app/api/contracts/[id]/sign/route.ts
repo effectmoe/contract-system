@@ -232,6 +232,27 @@ export async function PUT(
       },
     });
 
+    // Auto-generate completion certificate if all signatures are collected
+    let certificateGenerated = false;
+    if (allSigned) {
+      try {
+        const certificateResponse = await fetch(`${process.env.VERCEL_URL || 'http://localhost:3000'}/api/contracts/${id}/certificate`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+        });
+        
+        if (certificateResponse.ok) {
+          certificateGenerated = true;
+          console.log('Completion certificate generated for contract:', id);
+        }
+      } catch (error) {
+        console.error('Failed to auto-generate certificate:', error);
+        // Don't fail the signature process if certificate generation fails
+      }
+    }
+
     // Generate QR code for verification
     const qrCodeData = electronicSignature.generateQRCodeData(contract, signature);
     
@@ -247,6 +268,7 @@ export async function PUT(
       },
       contractStatus: newStatus,
       allSigned,
+      certificateGenerated,
     });
   } catch (error) {
     console.error('Failed to submit signature:', error);
