@@ -168,9 +168,12 @@ export function generateNDAHTML(contract: Contract): string {
       
       .footer-id {
         margin-top: 20px;
-        padding-top: 10px;
-        border-top: 1px solid #ccc;
-        font-size: 8pt;
+        padding: 15px;
+        border: 1px solid #ddd;
+        background-color: #f9f9f9;
+        font-size: 9pt;
+        text-align: center;
+        color: #666;
       }
       
       .footer-signature {
@@ -438,7 +441,7 @@ export function generateNDAHTML(contract: Contract): string {
         <!-- フッター -->
         <div class="footer">
           <div class="footer-id">
-            KeiyakuDaijin ID: ${contract.contractId}
+            Contract System ID: ${contract.contractId}
           </div>
         </div>
       </div>
