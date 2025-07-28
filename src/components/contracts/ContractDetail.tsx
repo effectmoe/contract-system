@@ -290,7 +290,8 @@ export default function ContractDetail({ contractId }: ContractDetailProps) {
             
             <a
               href={`/api/contracts/${contractId}/pdf`}
-              download
+              target="_blank"
+              rel="noopener noreferrer"
               className="btn-secondary flex items-center gap-2"
             >
               <Download className="w-4 h-4" />
@@ -300,7 +301,8 @@ export default function ContractDetail({ contractId }: ContractDetailProps) {
             {contract.status === 'completed' && (
               <a
                 href={`/api/contracts/${contractId}/certificate`}
-                download
+                target="_blank"
+                rel="noopener noreferrer"
                 className="btn-secondary flex items-center gap-2"
               >
                 <Award className="w-4 h-4" />

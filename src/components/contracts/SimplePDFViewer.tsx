@@ -49,7 +49,23 @@ export default function SimplePDFViewer({ contractId, includeSignatures = true }
           src={pdfUrl}
           className="w-full h-[600px] bg-white rounded shadow-lg"
           title="契約書PDF"
+          onError={(e) => {
+            console.error('PDF iframe error:', e);
+          }}
         />
+        <div className="mt-4 text-sm text-gray-600">
+          <p>PDFが表示されない場合は、上記のダウンロードボタンからPDFをダウンロードしてご確認ください。</p>
+          <p className="mt-2">
+            <a 
+              href={pdfUrl} 
+              target="_blank" 
+              rel="noopener noreferrer"
+              className="text-blue-600 hover:underline"
+            >
+              新しいタブで開く →
+            </a>
+          </p>
+        </div>
       </div>
     </div>
   );
