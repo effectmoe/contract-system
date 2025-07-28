@@ -1,4 +1,4 @@
-import { MongoClient, Db, Collection, Filter, UpdateFilter, FindOptions } from 'mongodb';
+import { MongoClient, Db, Collection, Filter, UpdateFilter, FindOptions, Document } from 'mongodb';
 import { 
   DatabaseCollections, 
   MongoDBConnection, 
@@ -8,6 +8,9 @@ import {
 } from '@/types/database';
 import { Contract, ContractTemplate, AuditEntry } from '@/types/contract';
 import { User, Session, AICacheEntry } from '@/types/database';
+
+// Define our own base document type
+type BaseDocument = Record<string, any>;
 
 import { config } from '../config/env';
 
@@ -117,7 +120,7 @@ async function createIndexes(db: Db): Promise<void> {
 }
 
 // Generic CRUD operations
-export class DatabaseService<T> {
+export class DatabaseService<T extends BaseDocument = BaseDocument> {
   private collection: Collection<T>;
 
   constructor(private db: Db, private collectionName: string) {
@@ -125,7 +128,7 @@ export class DatabaseService<T> {
   }
 
   async findOne(filter: Filter<T>): Promise<T | null> {
-    return await this.collection.findOne(filter);
+    return await this.collection.findOne(filter) as T | null;
   }
 
   async findMany(
@@ -144,7 +147,7 @@ export class DatabaseService<T> {
     };
 
     const [data, total] = await Promise.all([
-      this.collection.find(filter, findOptions).toArray(),
+      this.collection.find(filter, findOptions).toArray() as Promise<T[]>,
       this.collection.countDocuments(filter),
     ]);
 
@@ -179,8 +182,8 @@ export class DatabaseService<T> {
     return result.deletedCount > 0;
   }
 
-  async aggregate<R>(pipeline: any[]): Promise<R[]> {
-    return await this.collection.aggregate<R>(pipeline).toArray();
+  async aggregate<R = T>(pipeline: any[]): Promise<R[]> {
+    return await this.collection.aggregate(pipeline).toArray() as R[];
   }
 }
 
@@ -215,7 +218,7 @@ export class ContractService {
     };
 
     return await this.contracts.findMany(searchFilter, {
-      sort: { score: { $meta: 'textScore' }, createdAt: -1 },
+      sort: { score: { $meta: 'textScore' } as any, createdAt: -1 },
     });
   }
 
@@ -330,7 +333,7 @@ export async function getContractService(): Promise<ContractService> {
   return new ContractService(db);
 }
 
-export async function getDatabaseService<T>(
+export async function getDatabaseService<T extends BaseDocument = BaseDocument>(
   collectionName: string
 ): Promise<DatabaseService<T>> {
   const { db } = await connectToDatabase();

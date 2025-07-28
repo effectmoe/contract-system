@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { azureComputerVision } from '@/lib/ocr/azure-cv';
 import { rateLimiter } from '@/lib/db/kv';
-import { ERROR_MESSAGES, MAX_FILE_SIZE, ALLOWED_FILE_TYPES } from '@/lib/utils/constants';
+import { ERROR_MESSAGES, SUCCESS_MESSAGES, MAX_FILE_SIZE, ALLOWED_FILE_TYPES } from '@/lib/utils/constants';
 
 // POST /api/upload/ocr - Upload image and perform OCR
 export async function POST(request: NextRequest) {
@@ -75,7 +75,7 @@ export async function POST(request: NextRequest) {
       lineCount: ocrResult.lines.length,
       isContract,
       contractInfo,
-      message: ERROR_MESSAGES.OCR_COMPLETE,
+      message: SUCCESS_MESSAGES.OCR_COMPLETE,
     });
   } catch (error) {
     console.error('OCR upload error:', error);

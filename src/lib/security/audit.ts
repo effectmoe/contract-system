@@ -231,18 +231,18 @@ export class AuditService {
     ];
 
     const results = await auditService.aggregate(pipeline);
-    const data = results[0];
+    const data = results[0] as any;
 
     return {
-      totalActions: data.totalActions[0]?.count || 0,
+      totalActions: data?.totalActions?.[0]?.count || 0,
       actionsByType: Object.fromEntries(
-        data.actionsByType.map((item: any) => [item._id, item.count])
+        (data?.actionsByType || []).map((item: any) => [item._id, item.count])
       ),
       actionsByResource: Object.fromEntries(
-        data.actionsByResource.map((item: any) => [item._id, item.count])
+        (data?.actionsByResource || []).map((item: any) => [item._id, item.count])
       ),
-      failedActions: data.failedActions[0]?.count || 0,
-      uniqueUsers: data.uniqueUsers[0]?.count || 0,
+      failedActions: data?.failedActions?.[0]?.count || 0,
+      uniqueUsers: data?.uniqueUsers?.[0]?.count || 0,
     };
   }
 }

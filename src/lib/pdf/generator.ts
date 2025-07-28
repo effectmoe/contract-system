@@ -1,4 +1,4 @@
-import { PDFDocument, PDFPage, rgb, StandardFonts } from 'pdf-lib';
+import { PDFDocument, PDFPage, rgb, StandardFonts, degrees } from 'pdf-lib';
 import fontkit from '@pdf-lib/fontkit';
 import { Contract, Signature } from '@/types/contract';
 import { formatDate } from '../utils/helpers';
@@ -276,7 +276,7 @@ export class PDFGenerator {
         font: helveticaFont,
         color: rgb(0.8, 0.8, 0.8),
         opacity: 0.3,
-        rotate: { angle: 45, origin: { x: width / 2, y: height / 2 } },
+        rotate: degrees(45),
       });
     }
   }
@@ -321,20 +321,4 @@ export class PDFGenerator {
 
     // Page number would go here if multi-page
   }
-}
-
-// Utility function for format date
-function formatDate(date: Date | string, includeTime: boolean = false): string {
-  const d = new Date(date);
-  const year = d.getFullYear();
-  const month = String(d.getMonth() + 1).padStart(2, '0');
-  const day = String(d.getDate()).padStart(2, '0');
-  
-  if (includeTime) {
-    const hours = String(d.getHours()).padStart(2, '0');
-    const minutes = String(d.getMinutes()).padStart(2, '0');
-    return `${year}年${month}月${day}日 ${hours}:${minutes}`;
-  }
-  
-  return `${year}年${month}月${day}日`;
 }

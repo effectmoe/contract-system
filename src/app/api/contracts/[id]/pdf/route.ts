@@ -4,14 +4,11 @@ import { PDFGenerator } from '@/lib/pdf/generator';
 import { rateLimiter } from '@/lib/db/kv';
 import { ERROR_MESSAGES } from '@/lib/utils/constants';
 
-interface RouteParams {
-  params: {
-    id: string;
-  };
-}
-
 // GET /api/contracts/[id]/pdf - Generate PDF for contract
-export async function GET(request: NextRequest, { params }: RouteParams) {
+export async function GET(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
   try {
     // Rate limiting
     const ip = request.headers.get('x-forwarded-for') || 'unknown';
@@ -24,9 +21,11 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
       );
     }
 
+    const { id } = await params;
+    
     const contractService = await getContractService();
     const contract = await contractService['contracts'].findOne({ 
-      contractId: params.id 
+      contractId: id 
     });
 
     if (!contract) {
@@ -50,7 +49,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
       performedBy: 'system', // TODO: Get from auth
       performedAt: new Date(),
       details: { 
-        contractId: params.id,
+        contractId: id,
         format: 'pdf',
         includeSignatures
       },

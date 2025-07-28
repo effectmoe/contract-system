@@ -5,14 +5,11 @@ import { kvCache, CacheKeys, CacheDurations } from '@/lib/db/kv';
 import { rateLimiter } from '@/lib/db/kv';
 import { ERROR_MESSAGES, SUCCESS_MESSAGES, SIGNATURE_EXPIRY_HOURS } from '@/lib/utils/constants';
 
-interface RouteParams {
-  params: {
-    id: string;
-  };
-}
-
 // POST /api/contracts/[id]/sign - Create signature request
-export async function POST(request: NextRequest, { params }: RouteParams) {
+export async function POST(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
   try {
     // Rate limiting
     const ip = request.headers.get('x-forwarded-for') || 'unknown';
@@ -35,9 +32,11 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
       );
     }
 
+    const { id } = await params;
+    
     const contractService = await getContractService();
     const contract = await contractService['contracts'].findOne({ 
-      contractId: params.id 
+      contractId: id 
     });
 
     if (!contract) {
@@ -66,12 +65,12 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
     }
 
     // Generate signature token
-    const token = electronicSignature.generateSignatureToken(params.id, partyId);
+    const token = electronicSignature.generateSignatureToken(id, partyId);
     
     // Store token in cache
     await kvCache.set(
       CacheKeys.signatureToken(token),
-      { contractId: params.id, partyId },
+      { contractId: id, partyId },
       { ex: CacheDurations.signatureToken }
     );
 
@@ -79,7 +78,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
     const expiresAt = new Date(Date.now() + SIGNATURE_EXPIRY_HOURS * 60 * 60 * 1000);
     
     await contractService['contracts'].update(
-      { contractId: params.id },
+      { contractId: id },
       { 
         $set: { 
           signatureRequestToken: token,
@@ -97,14 +96,14 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
       performedBy: 'system', // TODO: Get from auth
       performedAt: new Date(),
       details: { 
-        contractId: params.id,
+        contractId: id,
         partyId,
         expiresAt
       },
     });
 
     // TODO: Send email notification to party
-    const signatureUrl = `${process.env.CONTRACT_DOMAIN}/contracts/${params.id}/sign/${token}`;
+    const signatureUrl = `${process.env.CONTRACT_DOMAIN}/contracts/${id}/sign/${token}`;
 
     return NextResponse.json({
       message: SUCCESS_MESSAGES.CONTRACT_SENT,
@@ -122,7 +121,10 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
 }
 
 // PUT /api/contracts/[id]/sign - Submit signature
-export async function PUT(request: NextRequest, { params }: RouteParams) {
+export async function PUT(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
   try {
     // Rate limiting
     const ip = request.headers.get('x-forwarded-for') || 'unknown';
@@ -154,9 +156,10 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
       );
     }
 
+    const { id } = await params;
     const { contractId, partyId } = tokenData as any;
     
-    if (contractId !== params.id) {
+    if (contractId !== id) {
       return NextResponse.json(
         { error: '無効な署名トークンです' },
         { status: 400 }
@@ -165,7 +168,7 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
 
     const contractService = await getContractService();
     const contract = await contractService['contracts'].findOne({ 
-      contractId: params.id 
+      contractId: id 
     });
 
     if (!contract) {
@@ -178,7 +181,7 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
     // Create signature
     const userAgent = request.headers.get('user-agent') || 'unknown';
     const signature = await electronicSignature.createSignature({
-      contractId: params.id,
+      contractId: id,
       partyId,
       signatureDataUrl,
       ipAddress: ip,
@@ -197,7 +200,7 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
 
     // Update contract
     await contractService['contracts'].update(
-      { contractId: params.id },
+      { contractId: id },
       { 
         $set: { 
           signatures,
@@ -222,7 +225,7 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
       performedBy: partyId,
       performedAt: new Date(),
       details: { 
-        contractId: params.id,
+        contractId: id,
         certificateId: signature.certificateId,
         ipAddress: ip,
         userAgent,

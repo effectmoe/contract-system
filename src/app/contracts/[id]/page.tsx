@@ -7,16 +7,18 @@ export const metadata = {
 };
 
 interface PageProps {
-  params: {
+  params: Promise<{
     id: string;
-  };
+  }>;
 }
 
-export default function ContractDetailPage({ params }: PageProps) {
+export default async function ContractDetailPage({ params }: PageProps) {
+  const { id } = await params;
+  
   return (
     <div className="min-h-screen bg-gray-50">
       <Header />
-      <ContractDetail contractId={params.id} />
+      <ContractDetail contractId={id} />
     </div>
   );
 }

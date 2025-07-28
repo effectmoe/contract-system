@@ -1,16 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getContractService } from '@/lib/db/mongodb';
 import { rateLimiter } from '@/lib/db/kv';
-import { ERROR_MESSAGES } from '@/lib/utils/constants';
-
-interface RouteParams {
-  params: {
-    id: string;
-  };
-}
+import { ERROR_MESSAGES, SUCCESS_MESSAGES } from '@/lib/utils/constants';
 
 // GET /api/contracts/[id] - Get single contract
-export async function GET(request: NextRequest, { params }: RouteParams) {
+export async function GET(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
   try {
     // Rate limiting
     const ip = request.headers.get('x-forwarded-for') || 'unknown';
@@ -23,9 +20,11 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
       );
     }
 
+    const { id } = await params;
+    
     const contractService = await getContractService();
     const contract = await contractService['contracts'].findOne({ 
-      contractId: params.id 
+      contractId: id 
     });
 
     if (!contract) {
@@ -41,7 +40,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
       action: 'viewed',
       performedBy: 'system', // TODO: Get from auth
       performedAt: new Date(),
-      details: { contractId: params.id },
+      details: { contractId: id },
     });
 
     return NextResponse.json(contract);
@@ -55,7 +54,10 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
 }
 
 // PUT /api/contracts/[id] - Update contract
-export async function PUT(request: NextRequest, { params }: RouteParams) {
+export async function PUT(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
   try {
     // Rate limiting
     const ip = request.headers.get('x-forwarded-for') || 'unknown';
@@ -68,12 +70,13 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
       );
     }
 
+    const { id } = await params;
     const body = await request.json();
     const contractService = await getContractService();
 
     // Check if contract exists
     const existingContract = await contractService['contracts'].findOne({ 
-      contractId: params.id 
+      contractId: id 
     });
 
     if (!existingContract) {
@@ -98,7 +101,7 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
     };
 
     const result = await contractService['contracts'].update(
-      { contractId: params.id },
+      { contractId: id },
       { $set: updateData }
     );
 
@@ -116,13 +119,13 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
       performedBy: 'system', // TODO: Get from auth
       performedAt: new Date(),
       details: { 
-        contractId: params.id,
+        contractId: id,
         changes: Object.keys(body)
       },
     });
 
     return NextResponse.json({ 
-      message: ERROR_MESSAGES.CONTRACT_UPDATED,
+      message: SUCCESS_MESSAGES.CONTRACT_UPDATED,
       success: true 
     });
   } catch (error) {
@@ -135,7 +138,10 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
 }
 
 // DELETE /api/contracts/[id] - Delete contract (soft delete)
-export async function DELETE(request: NextRequest, { params }: RouteParams) {
+export async function DELETE(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
   try {
     // Rate limiting
     const ip = request.headers.get('x-forwarded-for') || 'unknown';
@@ -148,11 +154,13 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
       );
     }
 
+    const { id } = await params;
+    
     const contractService = await getContractService();
 
     // Check if contract exists
     const existingContract = await contractService['contracts'].findOne({ 
-      contractId: params.id 
+      contractId: id 
     });
 
     if (!existingContract) {
@@ -172,7 +180,7 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
 
     // Soft delete by updating status
     const result = await contractService.updateContractStatus(
-      params.id,
+      id,
       'cancelled',
       'system' // TODO: Get from auth
     );
