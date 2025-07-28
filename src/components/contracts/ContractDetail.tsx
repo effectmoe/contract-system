@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { 
   FileText, Download, Edit, Send, Shield, MessageSquare, 
   Brain, Calendar, Users, AlertCircle, CheckCircle,
-  ChevronLeft, Loader, Award
+  ChevronLeft, Award
 } from 'lucide-react';
 import { Contract } from '@/types/contract';
 import { CONTRACT_STATUS_LABELS, CONTRACT_TYPE_LABELS, STATUS_COLORS } from '@/lib/utils/constants';
@@ -13,7 +13,9 @@ import { formatDate } from '@/lib/utils/helpers';
 import SimplePDFViewer from './SimplePDFViewer';
 import SignatureCapture from './SignatureCapture';
 import AIChat from './AIChat';
-import ChatWidget from './ChatWidget';
+import EnhancedAIChat from './EnhancedAIChat';
+import EnhancedAnalysisDisplay from './EnhancedAnalysisDisplay';
+import { EnhancedAnalysis } from '@/lib/legal/rag-service';
 
 interface ContractDetailProps {
   contractId: string;
@@ -24,10 +26,11 @@ export default function ContractDetail({ contractId }: ContractDetailProps) {
   const [contract, setContract] = useState<Contract | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<'detail' | 'pdf' | 'signature' | 'ai'>('detail');
+  const [activeTab, setActiveTab] = useState<'detail' | 'pdf' | 'signature' | 'ai' | 'enhanced-ai'>('detail');
   const [showSignature, setShowSignature] = useState(false);
   const [analyzing, setAnalyzing] = useState(false);
-  const [generatingCertificate, setGeneratingCertificate] = useState(false);
+  const [enhancedAnalyzing, setEnhancedAnalyzing] = useState(false);
+  const [enhancedAnalysis, setEnhancedAnalysis] = useState<EnhancedAnalysis | null>(null);
 
   useEffect(() => {
     fetchContract();
@@ -139,39 +142,31 @@ export default function ContractDetail({ contractId }: ContractDetailProps) {
     }
   };
 
-  const handleGenerateCertificate = async () => {
-    if (!contract) return;
-    
-    setGeneratingCertificate(true);
+  const handleEnhancedAIAnalysis = async () => {
+    setEnhancedAnalyzing(true);
     try {
-      const response = await fetch(`/api/contracts/${contractId}/certificate`, {
+      const response = await fetch('/api/ai/enhanced-analyze', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
+        body: JSON.stringify({ contractId }),
       });
 
       if (!response.ok) {
-        throw new Error('証明書の生成に失敗しました');
+        throw new Error('拡張AI分析に失敗しました');
       }
 
       const data = await response.json();
-      
-      if (data.pdfUrl) {
-        // PDF URLが返された場合はダウンロード
-        const link = document.createElement('a');
-        link.href = data.pdfUrl;
-        link.download = `合意締結証明書_${contract.contractId}.pdf`;
-        link.click();
-      }
-      
-      alert('証明書を生成しました');
+      setEnhancedAnalysis(data.analysis);
+      alert('拡張AI分析が完了しました');
     } catch (err) {
-      alert('証明書の生成に失敗しました');
+      alert(err instanceof Error ? err.message : 'エラーが発生しました');
     } finally {
-      setGeneratingCertificate(false);
+      setEnhancedAnalyzing(false);
     }
   };
+
 
   const handleDownloadCertificate = async () => {
     if (!contract) return;
@@ -201,7 +196,7 @@ export default function ContractDetail({ contractId }: ContractDetailProps) {
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
-        <Loader className="w-12 h-12 animate-spin text-blue-600" />
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
       </div>
     );
   }
@@ -273,20 +268,6 @@ export default function ContractDetail({ contractId }: ContractDetailProps) {
               </button>
             )}
             
-            {contract.status === 'completed' && (
-              <button
-                onClick={handleGenerateCertificate}
-                disabled={generatingCertificate}
-                className="btn-secondary flex items-center gap-2"
-              >
-                {generatingCertificate ? (
-                  <Loader className="w-4 h-4 animate-spin" />
-                ) : (
-                  <Award className="w-4 h-4" />
-                )}
-                証明書生成
-              </button>
-            )}
             
             <a
               href={`/api/contracts/${contractId}/pdf`}
@@ -355,6 +336,16 @@ export default function ContractDetail({ contractId }: ContractDetailProps) {
             }`}
           >
             AI分析
+          </button>
+          <button
+            onClick={() => setActiveTab('enhanced-ai')}
+            className={`py-2 px-1 border-b-2 font-medium text-sm ${
+              activeTab === 'enhanced-ai'
+                ? 'border-blue-500 text-blue-600'
+                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+            }`}
+          >
+            拡張AI分析
           </button>
         </nav>
       </div>
@@ -431,7 +422,11 @@ export default function ContractDetail({ contractId }: ContractDetailProps) {
 
       {activeTab === 'pdf' && (
         <div className="card">
-          <SimplePDFViewer contractId={contract.contractId} />
+          <SimplePDFViewer 
+            contractId={contract.contractId} 
+            contractType={contract.type}
+            contractTitle={contract.title}
+          />
         </div>
       )}
 
@@ -520,7 +515,7 @@ export default function ContractDetail({ contractId }: ContractDetailProps) {
               >
                 {analyzing ? (
                   <>
-                    <Loader className="w-4 h-4 animate-spin mr-1" />
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-1"></div>
                     分析中...
                   </>
                 ) : (
@@ -596,9 +591,64 @@ export default function ContractDetail({ contractId }: ContractDetailProps) {
           </div>
         </div>
       )}
+
+      {activeTab === 'enhanced-ai' && (
+        <div className="grid md:grid-cols-2 gap-6">
+          {/* 拡張AI分析 */}
+          <div className="md:col-span-1">
+            <EnhancedAnalysisDisplay
+              contractId={contract.contractId}
+              analysis={enhancedAnalysis}
+              onRunAnalysis={handleEnhancedAIAnalysis}
+              isAnalyzing={enhancedAnalyzing}
+            />
+          </div>
+
+          {/* 法務特化型AIチャット */}
+          <div className="md:col-span-1">
+            <div className="card h-[600px]">
+              <EnhancedAIChat 
+                contractId={contract.contractId}
+              />
+            </div>
+          </div>
+        </div>
+      )}
       
-      {/* Chat Widget */}
-      <ChatWidget contract={contract} />
+      {/* 契約書特化型チャット（ページ下部埋め込み） */}
+      <div className="mt-12 border-t pt-8">
+        <div className="mb-6">
+          <h2 className="text-2xl font-bold text-gray-900 mb-2">この契約書について質問する</h2>
+          <p className="text-gray-600">
+            この契約書「{contract.title}」に関する専門的な質問にお答えします。
+            法的根拠に基づいた詳細な回答を提供いたします。
+          </p>
+        </div>
+        
+        <div className="bg-gray-50 rounded-lg p-6">
+          <div className="h-[500px]">
+            <EnhancedAIChat 
+              contractId={contract.contractId}
+              isEmbedded={true}
+              contractTitle={contract.title}
+            />
+          </div>
+        </div>
+        
+        {/* 免責事項 */}
+        <div className="mt-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+          <div className="flex items-start gap-3">
+            <AlertCircle className="w-5 h-5 text-blue-600 mt-0.5 flex-shrink-0" />
+            <div className="text-sm">
+              <p className="font-medium text-blue-900 mb-1">専門的な法的アドバイスについて</p>
+              <p className="text-blue-800 leading-relaxed">
+                このAIアシスタントは契約書「{contract.title}」に特化した情報を提供しますが、
+                正式な法的アドバイスではありません。重要な決定については必ず法律専門家にご相談ください。
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }

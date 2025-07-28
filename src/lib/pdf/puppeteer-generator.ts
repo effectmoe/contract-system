@@ -1,6 +1,7 @@
 import { Contract } from '@/types/contract';
 import { generateContractHTML } from './contract-html-generator';
 import { generateNDAHTML } from './nda-html-generator';
+import { generateEmploymentHTML } from './employment-html-generator';
 import { generateCertificateHTML } from './certificate-html-generator';
 import { config } from '../config/env';
 
@@ -59,8 +60,8 @@ export async function generateContractPDFWithPuppeteer(
     // ページサイズをA4に設定
     await page.setViewport({ width: 794, height: 1123 });
     
-    // HTMLコンテンツを生成（PDFタイプに応じて切り替え）
-    console.log('Generating HTML content for type:', pdfType);
+    // HTMLコンテンツを生成（PDFタイプと契約タイプに応じて切り替え）
+    console.log('Generating HTML content for type:', pdfType, 'contract type:', contract.type);
     let htmlContent: string;
     switch (pdfType) {
       case 'nda':
@@ -71,7 +72,19 @@ export async function generateContractPDFWithPuppeteer(
         break;
       case 'contract':
       default:
-        htmlContent = generateContractHTML(contract, includeSignatures);
+        // 契約タイプに応じてHTMLジェネレーターを選択
+        switch (contract.type) {
+          case 'nda':
+            htmlContent = generateNDAHTML(contract);
+            break;
+          case 'employment':
+            htmlContent = generateEmploymentHTML(contract);
+            break;
+          case 'service_agreement':
+          default:
+            htmlContent = generateContractHTML(contract, includeSignatures);
+            break;
+        }
         break;
     }
     
@@ -147,8 +160,8 @@ export async function generateDemoPDF(contract: Contract, pdfType: 'contract' | 
     // ページサイズをA4に設定
     await page.setViewport({ width: 794, height: 1123 });
     
-    // HTMLコンテンツを生成（日本語フォント対応、PDFタイプに応じて切り替え）
-    console.log('Generating HTML content with Japanese font support for type:', pdfType);
+    // HTMLコンテンツを生成（日本語フォント対応、PDFタイプと契約タイプに応じて切り替え）
+    console.log('Generating HTML content with Japanese font support for type:', pdfType, 'contract type:', contract.type);
     let htmlContent: string;
     switch (pdfType) {
       case 'nda':
@@ -159,7 +172,19 @@ export async function generateDemoPDF(contract: Contract, pdfType: 'contract' | 
         break;
       case 'contract':
       default:
-        htmlContent = generateContractHTML(contract, true);
+        // 契約タイプに応じてHTMLジェネレーターを選択
+        switch (contract.type) {
+          case 'nda':
+            htmlContent = generateNDAHTML(contract);
+            break;
+          case 'employment':
+            htmlContent = generateEmploymentHTML(contract);
+            break;
+          case 'service_agreement':
+          default:
+            htmlContent = generateContractHTML(contract, true);
+            break;
+        }
         break;
     }
     

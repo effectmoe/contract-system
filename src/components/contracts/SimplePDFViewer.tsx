@@ -1,13 +1,21 @@
 'use client';
 
 import { Download } from 'lucide-react';
+import { formatDate } from '@/lib/utils/helpers';
 
 interface SimplePDFViewerProps {
   contractId: string;
   includeSignatures?: boolean;
+  contractType?: string;
+  contractTitle?: string;
 }
 
-export default function SimplePDFViewer({ contractId, includeSignatures = true }: SimplePDFViewerProps) {
+export default function SimplePDFViewer({ 
+  contractId, 
+  includeSignatures = true, 
+  contractType = 'contract',
+  contractTitle = '契約書'
+}: SimplePDFViewerProps) {
   const pdfUrl = `/api/contracts/${contractId}/pdf${includeSignatures ? '' : '?signatures=false'}`;
 
   const downloadPDF = async () => {
@@ -17,7 +25,23 @@ export default function SimplePDFViewer({ contractId, includeSignatures = true }
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `contract_${contractId}.pdf`;
+      
+      // 契約タイプに応じたファイル名を生成
+      const date = formatDate(new Date()).replace(/\//g, '-');
+      let filename = '';
+      
+      switch(contractType) {
+        case 'nda':
+          filename = `秘密保持契約書_${contractId}_${date}.pdf`;
+          break;
+        case 'certificate':
+          filename = `合意締結証明書_${contractId}_${date}.pdf`;
+          break;
+        default:
+          filename = `${contractTitle.replace(/[\/\\?%*:|"<>]/g, '_')}_${contractId}_${date}.pdf`;
+      }
+      
+      a.download = filename;
       document.body.appendChild(a);
       a.click();
       window.URL.revokeObjectURL(url);

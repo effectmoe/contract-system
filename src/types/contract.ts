@@ -27,6 +27,11 @@ export interface Contract {
   aiAnalysis?: AIAnalysis;
   aiTags?: string[];
   
+  // Tags and classification
+  tags?: string[];
+  priority?: 'low' | 'medium' | 'high';
+  category?: string;
+  
   // Metadata
   createdBy: string;
   createdAt: Date;
@@ -133,6 +138,8 @@ export type AuditAction =
   | 'cancelled'
   | 'completed'
   | 'ai_analyzed'
+  | 'enhanced_ai_analyzed'
+  | 'legal_chat'
   | 'ocr_processed';
 
 export interface ContractTemplate {

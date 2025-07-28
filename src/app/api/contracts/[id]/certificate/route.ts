@@ -26,54 +26,50 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
     if (!process.env.MONGODB_URI) {
       console.log('Demo mode: Certificate generation would be performed for:', contractId);
       
-      // Create demo certificate
-      const demoCertificate: CompletionCertificate = {
-        certificateId: 'demo-cert-123456',
-        contractId,
-        contractTitle: 'デモ契約書',
-        contractManagementNumber: contractId,
-        signatureType: 'electronic_signature',
-        authType: 'email_auth',
-        timestampDate: new Date(),
-        parties: [
-          {
-            id: 'party1',
-            type: 'sender',
-            name: 'テスト送信者',
-            email: 'sender@example.com',
-            company: 'テスト会社',
-            authMethod: 'Eメール認証',
-            signedAt: new Date('2024-12-01T10:00:00Z'),
-          },
-          {
-            id: 'party2',
-            type: 'receiver',
-            name: 'テスト受信者',
-            email: 'receiver@example.com',
-            company: 'テスト受信者会社',
-            authMethod: 'Eメール認証',
-            signedAt: new Date('2024-12-01T11:00:00Z'),
-            inputInfo: {
-              name: 'テスト受信者',
-              address: '東京都渋谷区テスト1-2-3',
-              company: 'テスト受信者会社',
-            },
-          },
-        ],
-        issuedAt: new Date(),
-        issuedBy: '電子契約システム（デモ）',
-        issuerCompany: 'tonychustudio',
-        certificateHash: 'demo-hash-' + Date.now(),
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      };
+      // デモモードでも実際にPDFを生成する
+      const demoContract = demoContracts.find(c => c.contractId === contractId);
+      
+      if (!demoContract) {
+        return NextResponse.json(
+          { error: '契約書が見つかりません' },
+          { status: 404 }
+        );
+      }
 
-      return NextResponse.json({
-        success: true,
-        certificate: demoCertificate,
-        pdfUrl: '/demo-certificate-url',
-        message: '証明書を生成しました（デモモード）',
-      });
+      try {
+        // デモモードで証明書PDF生成
+        const pdfBytes = await generateDemoPDF(demoContract, 'certificate');
+        
+        // PDFをBase64でエンコードしてデータURLとして返す
+        const pdfBase64 = Buffer.from(pdfBytes).toString('base64');
+        const pdfDataUrl = `data:application/pdf;base64,${pdfBase64}`;
+        
+        return NextResponse.json({
+          success: true,
+          certificate: {
+            certificateId: 'demo-cert-' + Date.now(),
+            contractId,
+            contractTitle: demoContract.title,
+            issuedAt: new Date(),
+          },
+          pdfUrl: pdfDataUrl,
+          message: '証明書を生成しました（デモモード）',
+        });
+      } catch (pdfError) {
+        console.error('Demo certificate PDF generation failed:', pdfError);
+        
+        // PDFエラーの場合もフォールバック応答を返す
+        return NextResponse.json({
+          success: true,
+          certificate: {
+            certificateId: 'demo-cert-fallback',
+            contractId,
+            contractTitle: 'デモ契約書',
+            issuedAt: new Date(),
+          },
+          message: '証明書を生成しました（デモモード - PDFエラーのためプレースホルダー）',
+        });
+      }
     }
 
     const { db } = await connectToDatabase();
