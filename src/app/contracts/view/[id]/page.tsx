@@ -18,7 +18,7 @@ export default async function ContractViewPage({ params }: PageProps) {
   const { id } = await params;
   
   // Check session
-  const cookieStore = cookies();
+  const cookieStore = await cookies();
   const sessionToken = cookieStore.get('contract-viewer-session');
 
   if (!sessionToken) {

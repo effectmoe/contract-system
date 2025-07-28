@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
-import pdf2pic from 'pdf2pic';
+const pdf2pic = require('pdf2pic');
 import { ComputerVisionClient } from '@azure/cognitiveservices-computervision';
 import { ApiKeyCredentials } from '@azure/ms-rest-js';
 
@@ -69,7 +69,7 @@ async function extractTextFromPDF(pdfUrl: string): Promise<string> {
       if (result.buffer) {
         // Perform OCR on the image
         const ocrResult = await computerVisionClient.readInStream(
-          () => Promise.resolve(result.buffer),
+          result.buffer as any,
           {
             language: 'ja', // Japanese
           }

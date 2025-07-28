@@ -50,7 +50,6 @@ export async function POST(request: NextRequest) {
       file,
       {
         access: 'public',
-        handleUploadUrl: '/api/upload/pdf',
       }
     );
 

@@ -127,7 +127,7 @@ export default function ContractViewer({ contractId, viewerInfo }: ContractViewe
 
   const mySignature = contract.signatures.find(s => s.partyId === viewerInfo.partyId);
   const isSigned = !!mySignature;
-  const canSign = contract.status === 'pending' && !isSigned;
+  const canSign = contract.status === 'pending_signature' && !isSigned;
 
   return (
     <>
@@ -204,10 +204,10 @@ export default function ContractViewer({ contractId, viewerInfo }: ContractViewe
               <Calendar className="w-4 h-4 text-gray-400" />
               <span>作成日: {formatDate(contract.createdAt)}</span>
             </div>
-            {contract.validUntil && (
+            {contract.signatureExpiresAt && (
               <div className="flex items-center gap-2">
                 <Shield className="w-4 h-4 text-gray-400" />
-                <span>有効期限: {formatDate(contract.validUntil)}</span>
+                <span>署名期限: {formatDate(contract.signatureExpiresAt)}</span>
               </div>
             )}
           </div>
@@ -267,7 +267,7 @@ export default function ContractViewer({ contractId, viewerInfo }: ContractViewe
         {contract.pdfUrl && (
           <div className="bg-white rounded-lg shadow-sm p-6 mb-6">
             <h3 className="text-lg font-semibold mb-4">PDF表示</h3>
-            <PDFViewer url={contract.pdfUrl} />
+            <PDFViewer contractId={contract.contractId} />
           </div>
         )}
 
@@ -328,9 +328,9 @@ export default function ContractViewer({ contractId, viewerInfo }: ContractViewe
               以下の枠内に署名してください。署名は契約書に記録されます。
             </p>
             <SignatureCapture
-              onSave={handleSignature}
+              onSign={handleSignature}
               onCancel={() => setShowSignature(false)}
-              disabled={signing}
+              partyName={viewerInfo.name}
             />
           </div>
         </div>

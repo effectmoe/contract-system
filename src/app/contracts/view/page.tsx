@@ -1,10 +1,10 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Loader } from 'lucide-react';
 
-export default function ContractViewerAuthPage() {
+function ContractViewerAuth() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [loading, setLoading] = useState(true);
@@ -72,4 +72,19 @@ export default function ContractViewerAuthPage() {
   }
 
   return null;
+}
+
+export default function ContractViewerAuthPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <Loader className="w-12 h-12 animate-spin text-blue-600 mx-auto mb-4" />
+          <p className="text-gray-600">読み込み中...</p>
+        </div>
+      </div>
+    }>
+      <ContractViewerAuth />
+    </Suspense>
+  );
 }

@@ -31,7 +31,7 @@ export async function POST(request: NextRequest) {
           { expiresIn: '24h' }
         );
 
-        const cookieStore = cookies();
+        const cookieStore = await cookies();
         cookieStore.set('contract-viewer-session', sessionToken, {
           httpOnly: true,
           secure: process.env.NODE_ENV === 'production',
@@ -79,7 +79,7 @@ export async function POST(request: NextRequest) {
       contractId: accessToken.contractId 
     });
     
-    const party = contract?.parties.find(p => p.id === accessToken.partyId);
+    const party = contract?.parties.find((p: any) => p.id === accessToken.partyId);
 
     if (!contract || !party) {
       return NextResponse.json(
@@ -103,7 +103,7 @@ export async function POST(request: NextRequest) {
     );
 
     // Set session cookie
-    const cookieStore = cookies();
+    const cookieStore = await cookies();
     cookieStore.set('contract-viewer-session', sessionToken, {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
