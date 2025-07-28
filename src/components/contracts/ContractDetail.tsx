@@ -10,7 +10,7 @@ import {
 import { Contract } from '@/types/contract';
 import { CONTRACT_STATUS_LABELS, CONTRACT_TYPE_LABELS, STATUS_COLORS } from '@/lib/utils/constants';
 import { formatDate } from '@/lib/utils/helpers';
-import PDFViewer from './PDFViewer';
+import SimplePDFViewer from './SimplePDFViewer';
 import SignatureCapture from './SignatureCapture';
 import AIChat from './AIChat';
 import ChatWidget from './ChatWidget';
@@ -294,8 +294,19 @@ export default function ContractDetail({ contractId }: ContractDetailProps) {
               className="btn-secondary flex items-center gap-2"
             >
               <Download className="w-4 h-4" />
-              PDF
+              {contract.type === 'nda' ? 'NDA PDF' : '契約書PDF'}
             </a>
+            
+            {contract.status === 'completed' && (
+              <a
+                href={`/api/contracts/${contractId}/certificate`}
+                download
+                className="btn-secondary flex items-center gap-2"
+              >
+                <Award className="w-4 h-4" />
+                合意締結証明書
+              </a>
+            )}
           </div>
         </div>
       </div>
@@ -418,7 +429,7 @@ export default function ContractDetail({ contractId }: ContractDetailProps) {
 
       {activeTab === 'pdf' && (
         <div className="card">
-          <PDFViewer contractId={contract.contractId} />
+          <SimplePDFViewer contractId={contract.contractId} />
         </div>
       )}
 
