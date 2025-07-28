@@ -182,7 +182,7 @@ export class PDFGenerator {
     await this.addVerificationQR(page, width - 150, 50);
 
     // Footer with legal compliance info
-    this.addFooter(page);
+    await this.addFooter(page);
 
     // Save PDF
     const pdfBytes = await pdfDoc.save();
@@ -303,9 +303,9 @@ export class PDFGenerator {
     });
   }
 
-  private addFooter(page: PDFPage) {
+  private async addFooter(page: PDFPage) {
     const { width } = page.getSize();
-    const helveticaFont = page.doc.embedStandardFont(StandardFonts.Helvetica);
+    const helveticaFont = await page.doc.embedFont(StandardFonts.Helvetica);
 
     // Legal compliance notice
     page.drawText(

@@ -84,11 +84,16 @@ export async function GET(
     }
 
     // Return PDF as response
+    // ファイル名を適切に設定（日本語タイトルと日付を含める）
+    const fileName = `契約書_${contract.title}_${new Date(contract.createdAt).toISOString().split('T')[0]}.pdf`;
+    const encodedFileName = encodeURIComponent(fileName);
+    
     return new NextResponse(pdfBytes, {
       status: 200,
       headers: {
         'Content-Type': 'application/pdf',
-        'Content-Disposition': `attachment; filename="${contract.contractId}.pdf"`,
+        // inline でブラウザ内表示、filename*= でUTF-8エンコーディング対応
+        'Content-Disposition': `inline; filename*=UTF-8''${encodedFileName}; filename="${contract.contractId}.pdf"`,
         'Cache-Control': 'no-cache, no-store, must-revalidate',
       },
     });

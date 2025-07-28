@@ -109,30 +109,90 @@ export async function generateContractPDFWithPuppeteer(
 export async function generateDemoPDF(contract: Contract): Promise<Buffer> {
   console.log('Generating demo PDF for contract:', contract.contractId);
   
-  // pdf-libを使用して実際のPDFを生成
-  const { PDFGenerator } = await import('./generator');
-  const generator = new PDFGenerator(contract, true);
-  
   try {
-    const pdfBytes = await generator.generatePDF();
+    // pdf-libを直接使用してシンプルなPDFを生成
+    const { PDFDocument, StandardFonts, rgb } = await import('pdf-lib');
+    
+    const pdfDoc = await PDFDocument.create();
+    const page = pdfDoc.addPage();
+    const { width, height } = page.getSize();
+    
+    // フォントを埋め込み
+    const helveticaFont = await pdfDoc.embedFont(StandardFonts.Helvetica);
+    const helveticaBoldFont = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
+    
+    // タイトル
+    page.drawText('Electronic Contract', {
+      x: 50,
+      y: height - 50,
+      size: 24,
+      font: helveticaBoldFont,
+      color: rgb(0, 0, 0),
+    });
+    
+    // 契約ID
+    page.drawText(`Contract ID: ${contract.contractId}`, {
+      x: 50,
+      y: height - 90,
+      size: 12,
+      font: helveticaFont,
+      color: rgb(0.3, 0.3, 0.3),
+    });
+    
+    // 作成日
+    page.drawText(`Created: ${new Date(contract.createdAt).toLocaleDateString()}`, {
+      x: 50,
+      y: height - 110,
+      size: 12,
+      font: helveticaFont,
+      color: rgb(0.3, 0.3, 0.3),
+    });
+    
+    // タイトル
+    page.drawText(contract.title, {
+      x: 50,
+      y: height - 150,
+      size: 18,
+      font: helveticaBoldFont,
+      color: rgb(0, 0, 0),
+    });
+    
+    // 契約内容（簡易版）
+    page.drawText('Contract Details:', {
+      x: 50,
+      y: height - 200,
+      size: 14,
+      font: helveticaBoldFont,
+      color: rgb(0, 0, 0),
+    });
+    
+    // 内容の最初の部分を表示
+    const contentLines = contract.content.split('\n').slice(0, 10);
+    let yPosition = height - 230;
+    
+    for (const line of contentLines) {
+      if (yPosition < 100) break;
+      
+      // 長い行は切り詰める
+      const truncatedLine = line.length > 80 ? line.substring(0, 77) + '...' : line;
+      
+      page.drawText(truncatedLine, {
+        x: 50,
+        y: yPosition,
+        size: 11,
+        font: helveticaFont,
+        color: rgb(0, 0, 0),
+      });
+      yPosition -= 15;
+    }
+    
+    // PDFを保存
+    const pdfBytes = await pdfDoc.save();
+    console.log('Demo PDF generated successfully, size:', pdfBytes.length);
     return Buffer.from(pdfBytes);
+    
   } catch (error) {
     console.error('Demo PDF generation error:', error);
-    
-    // フォールバック: エラーの場合は簡易テキストを返す
-    const fallbackText = `
-PDF Generation Error - Contract: ${contract.title}
-Contract ID: ${contract.contractId}
-Created: ${new Date(contract.createdAt).toLocaleDateString('ja-JP')}
-
-Error: ${error instanceof Error ? error.message : 'Unknown error'}
-
-Contract Content:
-${contract.content}
-
-Generated at: ${new Date().toISOString()}
-    `;
-    
-    return Buffer.from(fallbackText, 'utf-8');
+    throw error;
   }
 }
