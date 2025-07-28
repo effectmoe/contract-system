@@ -7,7 +7,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { 
   FileText, Plus, X, User, Building, Mail, 
-  AlertCircle, Save, Send 
+  AlertCircle, Save, Send, Upload, ArrowLeft
 } from 'lucide-react';
 import { ContractType, ContractParty } from '@/types/contract';
 import { 
@@ -16,6 +16,7 @@ import {
   ERROR_MESSAGES,
   DEFAULT_TEMPLATES 
 } from '@/lib/utils/constants';
+import PDFImporter from './PDFImporter';
 
 // Form validation schema
 const contractSchema = z.object({
@@ -43,6 +44,12 @@ export default function ContractCreator() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [selectedTemplate, setSelectedTemplate] = useState<ContractType | null>(null);
+  const [mode, setMode] = useState<'select' | 'manual' | 'pdf'>('select');
+  const [importedData, setImportedData] = useState<{
+    filename: string;
+    extractedText: string;
+    pdfUrl: string;
+  } | null>(null);
 
   const {
     register,
@@ -267,10 +274,94 @@ export default function ContractCreator() {
     }
   };
 
+  const handlePDFImport = (data: {
+    filename: string;
+    extractedText: string;
+    pdfUrl: string;
+  }) => {
+    setImportedData(data);
+    setValue('title', data.filename.replace('.pdf', ''));
+    setValue('content', data.extractedText);
+    setMode('manual');
+  };
+
+  // Mode Selection Screen
+  if (mode === 'select') {
+    return (
+      <div className="max-w-2xl mx-auto">
+        <div className="card text-center">
+          <h2 className="text-2xl font-bold text-gray-900 mb-6">契約書作成方法を選択</h2>
+          <p className="text-gray-600 mb-8">
+            新規で契約書を作成するか、既存のPDFから読み込むかを選択してください
+          </p>
+          
+          <div className="grid md:grid-cols-2 gap-6">
+            <button
+              onClick={() => setMode('manual')}
+              className="p-6 border-2 border-gray-300 rounded-lg hover:border-blue-500 hover:bg-blue-50 transition-colors group"
+            >
+              <FileText className="w-12 h-12 text-gray-400 group-hover:text-blue-600 mx-auto mb-4" />
+              <h3 className="text-lg font-semibold text-gray-900 mb-2">
+                新規作成
+              </h3>
+              <p className="text-sm text-gray-600">
+                テンプレートを使用して一から契約書を作成
+              </p>
+            </button>
+            
+            <button
+              onClick={() => setMode('pdf')}
+              className="p-6 border-2 border-gray-300 rounded-lg hover:border-blue-500 hover:bg-blue-50 transition-colors group"
+            >
+              <Upload className="w-12 h-12 text-gray-400 group-hover:text-blue-600 mx-auto mb-4" />
+              <h3 className="text-lg font-semibold text-gray-900 mb-2">
+                PDF読み込み
+              </h3>
+              <p className="text-sm text-gray-600">
+                既存のPDFから契約書データを作成
+              </p>
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // PDF Import Screen
+  if (mode === 'pdf') {
+    return (
+      <div>
+        <button
+          onClick={() => setMode('select')}
+          className="btn-secondary mb-6 flex items-center gap-2"
+        >
+          <ArrowLeft className="w-4 h-4" />
+          戻る
+        </button>
+        <PDFImporter
+          onImportComplete={handlePDFImport}
+          onCancel={() => setMode('select')}
+        />
+      </div>
+    );
+  }
+
   return (
     <div className="max-w-4xl mx-auto">
+      <div className="flex items-center justify-between mb-6">
+        <h2 className="text-2xl font-bold text-gray-900">
+          {importedData ? `PDF読み込み: ${importedData.filename}` : '新規契約書作成'}
+        </h2>
+        <button
+          onClick={() => setMode('select')}
+          className="btn-secondary flex items-center gap-2"
+        >
+          <ArrowLeft className="w-4 h-4" />
+          作成方法を変更
+        </button>
+      </div>
+      
       <div className="card">
-        <h2 className="text-2xl font-bold text-gray-900 mb-6">新規契約書作成</h2>
 
         {/* Template Selection */}
         <div className="mb-6">

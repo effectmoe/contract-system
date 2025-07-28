@@ -47,6 +47,38 @@ export default function ContractDetail({ contractId }: ContractDetailProps) {
     }
   };
 
+  const handleSendMagicLink = async (party: any) => {
+    try {
+      const response = await fetch('/api/auth/send-magic-link', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          contractId: contract!.contractId,
+          partyId: party.id,
+          email: party.email,
+          name: party.name,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error('リンクの送信に失敗しました');
+      }
+
+      const data = await response.json();
+      
+      if (data.demoLink) {
+        // Demo mode: show the link
+        alert(`デモモード: 以下のリンクで契約書を確認できます\n${window.location.origin}${data.demoLink}`);
+      } else {
+        alert(`${party.name}様にアクセスリンクを送信しました`);
+      }
+    } catch (err) {
+      alert('リンクの送信に失敗しました');
+    }
+  };
+
   const handleSendForSignature = async (partyId: string) => {
     try {
       const response = await fetch(`/api/contracts/${contractId}/sign`, {
@@ -276,13 +308,23 @@ export default function ContractDetail({ contractId }: ContractDetailProps) {
             </h3>
             <div className="space-y-3">
               {contract.parties.map((party) => (
-                <div key={party.id} className="border-l-4 border-gray-200 pl-3">
-                  <p className="font-medium">{party.name}</p>
-                  <p className="text-sm text-gray-600">{party.email}</p>
-                  {party.company && (
-                    <p className="text-sm text-gray-600">{party.company}</p>
-                  )}
-                  <p className="text-xs text-gray-500">{party.role}</p>
+                <div key={party.id} className="border-l-4 border-gray-200 pl-3 flex items-center justify-between">
+                  <div>
+                    <p className="font-medium">{party.name}</p>
+                    <p className="text-sm text-gray-600">{party.email}</p>
+                    {party.company && (
+                      <p className="text-sm text-gray-600">{party.company}</p>
+                    )}
+                    <p className="text-xs text-gray-500">{party.role}</p>
+                  </div>
+                  <button
+                    onClick={() => handleSendMagicLink(party)}
+                    className="btn-secondary text-sm flex items-center gap-2"
+                    title="確認リンクを送信"
+                  >
+                    <Send className="w-4 h-4" />
+                    確認リンク送信
+                  </button>
                 </div>
               ))}
             </div>

@@ -1,5 +1,6 @@
 import Header from '@/components/layout/Header';
 import ContractCreator from '@/components/contracts/ContractCreator';
+import PDFImporter from '@/components/contracts/PDFImporter';
 
 export const metadata = {
   title: '新規契約書作成 | 電子契約システム',
