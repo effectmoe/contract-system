@@ -249,3 +249,6 @@ export class RateLimiter {
 export const kvCache = new VercelKVService();
 export const sessionManager = new SessionManager();
 export const rateLimiter = new RateLimiter();
+
+// Export factory function for backward compatibility
+export const getKVStore = async () => kvCache;
