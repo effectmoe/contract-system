@@ -148,6 +148,7 @@ export type AuditAction =
   | 'sent_for_signature'
   | 'cancelled'
   | 'completed'
+  | 'deleted'
   | 'ai_analyzed'
   | 'enhanced_ai_analyzed'
   | 'legal_chat'
