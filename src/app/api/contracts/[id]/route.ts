@@ -350,7 +350,7 @@ export async function DELETE(
     }
 
     // Hard delete (permanent removal)
-    const result = await contractService['contracts'].deleteOne({ 
+    const result = await contractService['contracts'].delete({ 
       contractId: id 
     });
 
