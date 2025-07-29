@@ -4,12 +4,13 @@ import { getKVStore } from '@/lib/db/kv';
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params;
     const kv = await getKVStore();
     const templates = await kv.get<ContractTemplate[]>('templates') || [];
-    const template = templates.find(t => t.templateId === params.id);
+    const template = templates.find(t => t.templateId === id);
 
     if (!template) {
       return NextResponse.json(
@@ -33,14 +34,15 @@ export async function GET(
 
 export async function PATCH(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params;
     const body = await request.json();
     const kv = await getKVStore();
     const templates = await kv.get<ContractTemplate[]>('templates') || [];
     
-    const index = templates.findIndex(t => t.templateId === params.id);
+    const index = templates.findIndex(t => t.templateId === id);
     if (index === -1) {
       return NextResponse.json(
         { success: false, error: 'Template not found' },
@@ -71,13 +73,14 @@ export async function PATCH(
 
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params;
     const kv = await getKVStore();
     const templates = await kv.get<ContractTemplate[]>('templates') || [];
     
-    const filteredTemplates = templates.filter(t => t.templateId !== params.id);
+    const filteredTemplates = templates.filter(t => t.templateId !== id);
     
     if (filteredTemplates.length === templates.length) {
       return NextResponse.json(
