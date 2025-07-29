@@ -39,6 +39,13 @@ export default function Header() {
               <BarChart3 className="w-4 h-4" />
               分析
             </Link>
+            <Link
+              href="/contracts/templates"
+              className="text-gray-600 hover:text-blue-600 font-medium transition-colors flex items-center gap-1"
+            >
+              <FileText className="w-4 h-4" />
+              テンプレート
+            </Link>
           </nav>
 
           {/* User Menu */}
@@ -80,6 +87,13 @@ export default function Header() {
               onClick={() => setIsMenuOpen(false)}
             >
               分析
+            </Link>
+            <Link
+              href="/contracts/templates"
+              className="block py-2 text-gray-600 hover:text-blue-600 font-medium transition-colors"
+              onClick={() => setIsMenuOpen(false)}
+            >
+              テンプレート
             </Link>
           </nav>
         )}

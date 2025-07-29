@@ -1,33 +1,27 @@
 import { Contract, AIAnalysis } from '@/types/contract';
-import { legalKnowledgeService, LegalReference, ContractTemplate, LegalUpdate } from './knowledge-base';
+import { legalKnowledgeService } from './knowledge-base';
 import { deepSeekService } from '@/lib/ai/deepseek';
 import { kvCache, CacheKeys, CacheDurations } from '@/lib/db/kv';
+import { 
+  EnhancedAnalysis, 
+  ComplianceCheck, 
+  ClauseOptimization, 
+  LegalChatResponse, 
+  OptimizationResult 
+} from './rag-types';
+import {
+  extractLegalTopicsFromContract,
+  extractLegalTopicsFromQuery,
+  buildEnhancedContext,
+  buildChatContext,
+  performBasicComplianceChecks,
+  generateRecommendedClauses,
+  calculateResponseConfidence
+} from './utils';
+import { RISK_MITIGATION_SUGGESTIONS } from './constants';
+import { LegalReference, ContractTemplate } from './types';
 
-/**
- * 拡張されたAI分析結果
- */
-export interface EnhancedAnalysis extends AIAnalysis {
-  legalReferences: LegalReference[];
-  recommendedClauses: string[];
-  complianceChecks: ComplianceCheck[];
-  stampTaxInfo: StampTaxInfo;
-  relatedUpdates: LegalUpdate[];
-}
-
-export interface ComplianceCheck {
-  id: string;
-  title: string;
-  status: 'compliant' | 'warning' | 'non_compliant';
-  description: string;
-  recommendation?: string;
-  legalBasis: string;
-}
-
-export interface StampTaxInfo {
-  taxAmount: number;
-  explanation: string;
-  legalBasis: string;
-}
+export * from './rag-types';
 
 /**
  * RAG（Retrieval-Augmented Generation）サービス
@@ -44,7 +38,7 @@ export class ContractRAGService {
 
     try {
       // 1. 契約内容から法的トピックを抽出
-      const legalTopics = await this.extractLegalTopics(contract);
+      const legalTopics = extractLegalTopicsFromContract(contract);
       console.log('Extracted legal topics:', legalTopics);
 
       // 2. 関連する法的情報を並列取得
@@ -61,7 +55,7 @@ export class ContractRAGService {
       ]);
 
       // 3. 取得した情報をコンテキストとしてAI分析を実行
-      const enhancedContext = this.buildEnhancedContext(
+      const enhancedContext = buildEnhancedContext(
         contract,
         legalReferences,
         contractTemplates,
@@ -69,13 +63,13 @@ export class ContractRAGService {
       );
 
       // 4. コンプライアンスチェック
-      const complianceChecks = await this.performComplianceChecks(contract, legalReferences);
+      const complianceChecks = this.performEnhancedComplianceChecks(contract, legalReferences);
 
       // 5. 法務特化型AI分析の実行
       const baseAnalysis = await this.performLegalAnalysis(contract, enhancedContext);
 
       // 6. 推奨条項の生成
-      const recommendedClauses = this.generateRecommendedClauses(contract, contractTemplates);
+      const recommendedClauses = generateRecommendedClauses(contract, contractTemplates);
 
       const result: EnhancedAnalysis = {
         ...baseAnalysis,
@@ -113,31 +107,27 @@ export class ContractRAGService {
     message: string,
     context?: Contract,
     isContractSpecific: boolean = false
-  ): Promise<{
-    response: string;
-    references: LegalReference[];
-    confidence: number;
-  }> {
+  ): Promise<LegalChatResponse> {
     try {
       let enhancedContext = '';
       let references: LegalReference[] = [];
 
       if (context) {
         // 質問内容から関連する法的トピックを抽出
-        const topics = await this.extractLegalTopicsFromQuery(message);
+        const topics = extractLegalTopicsFromQuery(message);
         
         // 関連する法的情報を取得
         references = await legalKnowledgeService.searchLegalProvisions(topics);
         
         // コンテキストを構築
-        enhancedContext = this.buildChatContext(context, references, message, isContractSpecific);
+        enhancedContext = buildChatContext(context, references, message, isContractSpecific);
       }
 
       // DeepSeekを使用して法務特化型の回答を生成
       const response = await this.generateLegalResponse(message, enhancedContext, isContractSpecific, context);
       
       // 回答の信頼度を計算
-      const confidence = this.calculateResponseConfidence(response, references);
+      const confidence = calculateResponseConfidence(response, references);
 
       return {
         response,
@@ -158,18 +148,14 @@ export class ContractRAGService {
   /**
    * 契約条項の最適化提案
    */
-  async optimizeContractClauses(contract: Contract): Promise<{
-    suggestions: ClauseOptimization[];
-    riskMitigation: string[];
-    legalCompliance: string[];
-  }> {
+  async optimizeContractClauses(contract: Contract): Promise<OptimizationResult> {
     try {
       const templates = await legalKnowledgeService.getContractTemplates(contract.type);
       const legalReferences = await legalKnowledgeService.searchLegalProvisions([contract.type, '契約条項']);
 
       const suggestions = this.generateClauseOptimizations(contract, templates);
-      const riskMitigation = this.generateRiskMitigationSuggestions(contract, legalReferences);
-      const legalCompliance = this.generateComplianceSuggestions(contract, legalReferences);
+      const riskMitigation = RISK_MITIGATION_SUGGESTIONS.slice();
+      const legalCompliance = this.generateComplianceSuggestions(legalReferences);
 
       return {
         suggestions,
@@ -188,136 +174,6 @@ export class ContractRAGService {
   }
 
   // プライベートヘルパーメソッド
-
-  private async extractLegalTopics(contract: Contract): Promise<string[]> {
-    const topics = [];
-    
-    // 契約種別に基づく基本トピック
-    switch (contract.type) {
-      case 'service_agreement':
-        topics.push('業務委託', '善管注意義務', '損害賠償', '契約解除');
-        break;
-      case 'employment':
-        topics.push('雇用契約', '労働基準法', '就業規則', '解雇');
-        break;
-      case 'nda':
-        topics.push('秘密保持', '機密情報', '競業禁止', '損害賠償');
-        break;
-      default:
-        topics.push('契約', '民法', '債務不履行');
-    }
-
-    // 契約内容からキーワードを抽出
-    const contentKeywords = this.extractKeywordsFromContent(contract.content);
-    topics.push(...contentKeywords);
-
-    return [...new Set(topics)]; // 重複除去
-  }
-
-  private extractKeywordsFromContent(content: string): string[] {
-    const legalKeywords = [
-      '契約期間', '更新', '解除', '損害賠償', '責任', '義務', '権利',
-      '支払い', '報酬', '対価', '成果物', '著作権', '知的財産',
-      '秘密保持', '競業禁止', '準拠法', '管轄裁判所'
-    ];
-
-    return legalKeywords.filter(keyword => content.includes(keyword));
-  }
-
-  private async extractLegalTopicsFromQuery(query: string): Promise<string[]> {
-    const topics = [];
-    
-    // 質問文から法的キーワードを抽出
-    const queryKeywords = this.extractKeywordsFromContent(query);
-    topics.push(...queryKeywords);
-
-    // 一般的な法的質問パターンの検出
-    if (query.includes('解除') || query.includes('キャンセル')) {
-      topics.push('契約解除', '民法第545条');
-    }
-    if (query.includes('損害') || query.includes('賠償')) {
-      topics.push('損害賠償', '民法第415条');
-    }
-    if (query.includes('印紙') || query.includes('税')) {
-      topics.push('印紙税', '印紙税法');
-    }
-
-    return [...new Set(topics)];
-  }
-
-  private buildEnhancedContext(
-    contract: Contract,
-    legalReferences: LegalReference[],
-    templates: ContractTemplate[],
-    updates: LegalUpdate[]
-  ): string {
-    let context = `契約書分析コンテキスト：\n\n`;
-    context += `契約タイトル: ${contract.title}\n`;
-    context += `契約種別: ${contract.type}\n`;
-    context += `作成日: ${contract.createdAt}\n\n`;
-
-    if (legalReferences.length > 0) {
-      context += `関連法令：\n`;
-      legalReferences.forEach(ref => {
-        context += `- ${ref.title}: ${ref.content}\n`;
-      });
-      context += `\n`;
-    }
-
-    if (templates.length > 0) {
-      context += `推奨条項（テンプレートより）：\n`;
-      templates[0].clauses.forEach(clause => {
-        context += `- ${clause.title}: ${clause.explanation}\n`;
-      });
-      context += `\n`;
-    }
-
-    if (updates.length > 0) {
-      context += `関連する法改正情報：\n`;
-      updates.forEach(update => {
-        context += `- ${update.title}: ${update.summary}\n`;
-      });
-      context += `\n`;
-    }
-
-    return context;
-  }
-
-  private buildChatContext(
-    contract: Contract,
-    references: LegalReference[],
-    query: string,
-    isContractSpecific: boolean = false
-  ): string {
-    let context = `以下の契約書について質問に回答してください：\n\n`;
-    context += `契約書タイトル: ${contract.title}\n`;
-    context += `契約内容:\n${contract.content}\n\n`;
-
-    if (references.length > 0) {
-      context += `関連する法的根拠：\n`;
-      references.forEach(ref => {
-        context += `- ${ref.title}: ${ref.content}\n`;
-      });
-      context += `\n`;
-    }
-
-    context += `質問: ${query}\n\n`;
-    
-    if (isContractSpecific) {
-      context += `【重要な制約事項】
-この契約書「${contract.title}」に完全に特化した回答のみを提供してください。
-- この契約書の具体的な条項のみを参照
-- この契約書に直接関連する法的事項のみ言及
-- 一般論や他の契約書に関する回答は避ける
-- 必ず契約書の具体的な内容を引用して回答する
-
-上記の制約に基づいて、この特定の契約書についてのみ、正確で実用的な回答を提供してください。`;
-    } else {
-      context += `上記の法的根拠に基づいて、正確で実用的な回答を提供してください。不確実な場合は、その旨を明記し、専門家への相談を推奨してください。`;
-    }
-
-    return context;
-  }
 
   private async performLegalAnalysis(contract: Contract, context: string): Promise<AIAnalysis> {
     try {
@@ -341,93 +197,40 @@ export class ContractRAGService {
     }
   }
 
-  private async performComplianceChecks(
+  /**
+   * 拡張コンプライアンスチェック
+   */
+  private performEnhancedComplianceChecks(
     contract: Contract,
     references: LegalReference[]
-  ): Promise<ComplianceCheck[]> {
-    const checks: ComplianceCheck[] = [];
-
-    // 基本的なコンプライアンスチェック
-    checks.push({
-      id: 'contract_parties',
-      title: '契約当事者の明記',
-      status: contract.parties.length >= 2 ? 'compliant' : 'warning',
-      description: contract.parties.length >= 2 
-        ? '契約当事者が適切に明記されています。' 
-        : '契約当事者の情報が不完全な可能性があります。',
-      legalBasis: '民法第522条（契約の成立）'
-    });
-
-    // 電子契約特有のチェック
-    if (contract.signatures.length > 0) {
-      checks.push({
-        id: 'electronic_signature',
-        title: '電子署名の有効性',
+  ): ComplianceCheck[] {
+    // 基本チェックを実行
+    const basicChecks = performBasicComplianceChecks(contract);
+    
+    // 法的参照に基づく追加チェック
+    const additionalChecks: ComplianceCheck[] = [];
+    
+    // 関連法令に基づくチェックを追加
+    if (references.some(ref => ref.title.includes('民法'))) {
+      additionalChecks.push({
+        id: 'civil_code_compliance',
+        title: '民法準拠確認',
         status: 'compliant',
-        description: '電子署名が適切に実施されています。',
-        legalBasis: '電子署名法第3条'
+        description: '関連する民法条文に基づいたチェックが完了しました。',
+        legalBasis: '民法各条'
       });
     }
-
-    // 契約種別別のチェック
-    if (contract.type === 'employment') {
-      checks.push({
-        id: 'labor_standards',
-        title: '労働基準法への準拠',
-        status: 'warning',
-        description: '労働条件の明示が労働基準法に準拠しているか確認が必要です。',
-        recommendation: '労働基準法第15条に基づく労働条件の明示を確認してください。',
-        legalBasis: '労働基準法第15条'
-      });
-    }
-
-    return checks;
+    
+    return [...basicChecks, ...additionalChecks];
   }
 
-  private generateRecommendedClauses(
-    contract: Contract,
-    templates: ContractTemplate[]
-  ): string[] {
-    const recommendations: string[] = [];
+  // 削除 - utils.tsに移動済み
 
-    if (templates.length > 0) {
-      const template = templates[0];
-      
-      // 必須条項のチェック
-      const essentialClauses = template.clauses.filter(c => c.category === 'essential');
-      essentialClauses.forEach(clause => {
-        if (!contract.content.includes(clause.title.replace(/第\d+条/, ''))) {
-          recommendations.push(`${clause.title}の追加を推奨します: ${clause.explanation}`);
-        }
-      });
-
-      // 推奨条項の提案
-      const recommendedClauses = template.clauses.filter(c => c.category === 'recommended');
-      recommendedClauses.forEach(clause => {
-        recommendations.push(`${clause.title}の検討を推奨します: ${clause.explanation}`);
-      });
-    }
-
-    return recommendations;
-  }
-
-  private generateRiskMitigationSuggestions(
-    contract: Contract,
-    references: LegalReference[]
-  ): string[] {
-    return [
-      '契約解除条項の明確化により、予期しない状況に対応できます。',
-      '損害賠償条項の上限設定により、過度なリスクを回避できます。',
-      '不可抗力条項の追加により、天災等による履行不能リスクを軽減できます。',
-      '準拠法と管轄裁判所の明記により、紛争時の対応を明確にできます。'
-    ];
-  }
-
-  private generateComplianceSuggestions(
-    contract: Contract,
-    references: LegalReference[]
-  ): string[] {
-    const suggestions = [];
+  /**
+   * コンプライアンス提案を生成
+   */
+  private generateComplianceSuggestions(references: LegalReference[]): string[] {
+    const suggestions: string[] = [];
 
     // 法的根拠に基づく提案
     references.forEach(ref => {
@@ -477,24 +280,7 @@ ${context}`;
     }
   }
 
-  private calculateResponseConfidence(response: string, references: LegalReference[]): number {
-    let confidence = 0.5; // ベース信頼度
-
-    // 法的根拠の引用数に基づく加点
-    confidence += Math.min(0.3, references.length * 0.1);
-
-    // 不確実性の表現による減点
-    if (response.includes('不明') || response.includes('確実ではない')) {
-      confidence -= 0.2;
-    }
-
-    // 専門家相談推奨による適切な減点
-    if (response.includes('専門家') || response.includes('弁護士')) {
-      confidence -= 0.1; // むしろ誠実さの表れとして軽微な減点
-    }
-
-    return Math.max(0, Math.min(1, confidence));
-  }
+  // 削除 - utils.tsに移動済み
 
   private parseLegalAnalysisResponse(response: string, contract: Contract): AIAnalysis {
     // 簡易的なパーシング - 実際にはより高度な解析が必要
@@ -516,30 +302,45 @@ ${context}`;
     };
   }
 
+  /**
+   * 条項最適化提案を生成
+   */
   private generateClauseOptimizations(
     contract: Contract,
     templates: ContractTemplate[]
   ): ClauseOptimization[] {
-    return [
-      {
-        id: 'clause_clarity',
-        title: '条項の明確化',
-        currentIssue: '曖昧な表現が含まれています',
-        suggestion: 'より具体的で明確な表現に変更することを推奨します',
-        priority: 'high',
-        legalBasis: '契約解釈の明確性の原則'
+    const optimizations: ClauseOptimization[] = [];
+    
+    // 基本的な最適化提案
+    optimizations.push({
+      id: 'clause_clarity',
+      title: '条項の明確化',
+      currentIssue: '曖昧な表現が含まれている可能性があります',
+      suggestion: 'より具体的で明確な表現に変更することを推奨します',
+      priority: 'high',
+      legalBasis: '契約解釈の明確性の原則'
+    });
+    
+    // テンプレートに基づく追加提案
+    if (templates.length > 0) {
+      const missingClauses = templates[0].clauses.filter(clause => 
+        !contract.content.includes(clause.title.replace(/第\d+条/, ''))
+      );
+      
+      if (missingClauses.length > 0) {
+        optimizations.push({
+          id: 'missing_clauses',
+          title: '不足条項の追加',
+          currentIssue: '重要な条項が不足しています',
+          suggestion: 'テンプレートに基づいて必要な条項を追加してください',
+          priority: 'medium',
+          legalBasis: '契約の完全性の原則'
+        });
       }
-    ];
+    }
+    
+    return optimizations;
   }
-}
-
-export interface ClauseOptimization {
-  id: string;
-  title: string;
-  currentIssue: string;
-  suggestion: string;
-  priority: 'high' | 'medium' | 'low';
-  legalBasis: string;
 }
 
 // Export singleton instance

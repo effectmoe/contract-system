@@ -5,7 +5,8 @@ import { useRouter } from 'next/navigation';
 import { 
   FileText, Download, Edit, Send, Shield, MessageSquare, 
   Brain, Calendar, Users, AlertCircle, CheckCircle,
-  ChevronLeft, Award
+  ChevronLeft, Award, Link2, Receipt, FileSpreadsheet, 
+  RefreshCw, ExternalLink
 } from 'lucide-react';
 import { Contract } from '@/types/contract';
 import { CONTRACT_STATUS_LABELS, CONTRACT_TYPE_LABELS, STATUS_COLORS } from '@/lib/utils/constants';
@@ -378,6 +379,102 @@ export default function ContractDetail({ contractId }: ContractDetailProps) {
                 </div>
               )}
             </dl>
+          </div>
+
+          {/* AAM Accounting System Integration */}
+          <div className="card">
+            <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
+              <Link2 className="w-5 h-5" />
+              会計システム連動
+            </h3>
+            {contract.accountingIntegration ? (
+              <div className="space-y-3">
+                {/* Invoice Link */}
+                {contract.accountingIntegration.invoiceNumber && (
+                  <div className="flex items-center justify-between p-3 bg-green-50 rounded-lg">
+                    <div className="flex items-center gap-3">
+                      <Receipt className="w-5 h-5 text-green-600" />
+                      <div>
+                        <p className="text-sm font-medium">請求書</p>
+                        <p className="text-xs text-gray-600">
+                          {contract.accountingIntegration.invoiceNumber}
+                        </p>
+                      </div>
+                    </div>
+                    {contract.accountingIntegration.accountingSystemUrl && (
+                      <a
+                        href={`${contract.accountingIntegration.accountingSystemUrl}/invoices/${contract.accountingIntegration.invoiceId}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-blue-600 hover:text-blue-800"
+                      >
+                        <ExternalLink className="w-4 h-4" />
+                      </a>
+                    )}
+                  </div>
+                )}
+                
+                {/* Estimate Link */}
+                {contract.accountingIntegration.estimateNumber && (
+                  <div className="flex items-center justify-between p-3 bg-blue-50 rounded-lg">
+                    <div className="flex items-center gap-3">
+                      <FileSpreadsheet className="w-5 h-5 text-blue-600" />
+                      <div>
+                        <p className="text-sm font-medium">見積書</p>
+                        <p className="text-xs text-gray-600">
+                          {contract.accountingIntegration.estimateNumber}
+                        </p>
+                      </div>
+                    </div>
+                    {contract.accountingIntegration.accountingSystemUrl && (
+                      <a
+                        href={`${contract.accountingIntegration.accountingSystemUrl}/estimates/${contract.accountingIntegration.estimateId}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-blue-600 hover:text-blue-800"
+                      >
+                        <ExternalLink className="w-4 h-4" />
+                      </a>
+                    )}
+                  </div>
+                )}
+                
+                {/* Sync Status */}
+                <div className="flex items-center justify-between text-sm">
+                  <span className="text-gray-600">同期状態</span>
+                  <span className={`flex items-center gap-1 ${
+                    contract.accountingIntegration.syncStatus === 'synced' 
+                      ? 'text-green-600' 
+                      : contract.accountingIntegration.syncStatus === 'error'
+                      ? 'text-red-600'
+                      : 'text-yellow-600'
+                  }`}>
+                    {contract.accountingIntegration.syncStatus === 'synced' && <CheckCircle className="w-4 h-4" />}
+                    {contract.accountingIntegration.syncStatus === 'error' && <AlertCircle className="w-4 h-4" />}
+                    {contract.accountingIntegration.syncStatus === 'pending' && <RefreshCw className="w-4 h-4 animate-spin" />}
+                    {contract.accountingIntegration.syncStatus === 'synced' ? '同期済み' 
+                      : contract.accountingIntegration.syncStatus === 'error' ? 'エラー' 
+                      : '同期中'}
+                  </span>
+                </div>
+                
+                {contract.accountingIntegration.lastSyncedAt && (
+                  <p className="text-xs text-gray-500">
+                    最終同期: {formatDate(contract.accountingIntegration.lastSyncedAt)}
+                  </p>
+                )}
+              </div>
+            ) : (
+              <div className="text-center py-6">
+                <Link2 className="w-12 h-12 text-gray-300 mx-auto mb-3" />
+                <p className="text-sm text-gray-500 mb-3">
+                  会計システムと連動していません
+                </p>
+                <button className="btn-secondary text-sm">
+                  会計システムと連動
+                </button>
+              </div>
+            )}
           </div>
 
           {/* Parties */}

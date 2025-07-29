@@ -1,15 +1,16 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { 
   FileText, Plus, X, User, Building, Mail, 
-  AlertCircle, Save, Send, Upload, ArrowLeft
+  AlertCircle, Save, Send, Upload, ArrowLeft, Settings
 } from 'lucide-react';
 import { ContractType, ContractParty } from '@/types/contract';
+import { ContractTemplate } from '@/types/template';
 import { 
   CONTRACT_TYPE_LABELS, 
   SUCCESS_MESSAGES, 
@@ -44,6 +45,8 @@ export default function ContractCreator() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [selectedTemplate, setSelectedTemplate] = useState<ContractType | null>(null);
+  const [customTemplates, setCustomTemplates] = useState<ContractTemplate[]>([]);
+  const [selectedCustomTemplate, setSelectedCustomTemplate] = useState<ContractTemplate | null>(null);
   const [mode, setMode] = useState<'select' | 'manual' | 'pdf'>('select');
   const [importedData, setImportedData] = useState<{
     filename: string;
@@ -67,6 +70,22 @@ export default function ContractCreator() {
 
   const contractType = watch('type');
 
+  // Fetch custom templates
+  useEffect(() => {
+    const fetchTemplates = async () => {
+      try {
+        const response = await fetch('/api/templates');
+        const data = await response.json();
+        if (data.success && data.data) {
+          setCustomTemplates(data.data.filter((t: ContractTemplate) => t.isActive));
+        }
+      } catch (error) {
+        console.error('Failed to fetch templates:', error);
+      }
+    };
+    fetchTemplates();
+  }, []);
+
   const handleTemplateSelect = (type: ContractType) => {
     setSelectedTemplate(type);
     setValue('type', type);
@@ -77,6 +96,22 @@ export default function ContractCreator() {
       setValue('title', template.title);
       setValue('content', generateTemplateContent(type));
     }
+  };
+
+  const handleCustomTemplateSelect = (template: ContractTemplate) => {
+    setSelectedCustomTemplate(template);
+    setValue('title', template.content.title);
+    
+    // Generate content from template clauses
+    let content = template.content.title + '\n\n';
+    template.content.clauses
+      .sort((a, b) => a.order - b.order)
+      .forEach((clause) => {
+        content += `${clause.title}\n${clause.content}\n\n`;
+      });
+    
+    setValue('content', content);
+    setMode('manual');
   };
 
   const generateTemplateContent = (type: ContractType): string => {
@@ -288,14 +323,14 @@ export default function ContractCreator() {
   // Mode Selection Screen
   if (mode === 'select') {
     return (
-      <div className="max-w-2xl mx-auto">
-        <div className="card text-center">
-          <h2 className="text-2xl font-bold text-gray-900 mb-6">契約書作成方法を選択</h2>
-          <p className="text-gray-600 mb-8">
+      <div className="max-w-4xl mx-auto">
+        <div className="card">
+          <h2 className="text-2xl font-bold text-gray-900 mb-6 text-center">契約書作成方法を選択</h2>
+          <p className="text-gray-600 mb-8 text-center">
             新規で契約書を作成するか、既存のPDFから読み込むかを選択してください
           </p>
           
-          <div className="grid md:grid-cols-2 gap-6">
+          <div className="grid md:grid-cols-3 gap-6 mb-8">
             <button
               onClick={() => setMode('manual')}
               className="p-6 border-2 border-gray-300 rounded-lg hover:border-blue-500 hover:bg-blue-50 transition-colors group"
@@ -305,7 +340,7 @@ export default function ContractCreator() {
                 新規作成
               </h3>
               <p className="text-sm text-gray-600">
-                テンプレートを使用して一から契約書を作成
+                標準テンプレートから契約書を作成
               </p>
             </button>
             
@@ -321,7 +356,49 @@ export default function ContractCreator() {
                 既存のPDFから契約書データを作成
               </p>
             </button>
+            
+            <a
+              href="/contracts/templates"
+              target="_blank"
+              className="p-6 border-2 border-gray-300 rounded-lg hover:border-purple-500 hover:bg-purple-50 transition-colors group flex flex-col items-center"
+            >
+              <Settings className="w-12 h-12 text-gray-400 group-hover:text-purple-600 mx-auto mb-4" />
+              <h3 className="text-lg font-semibold text-gray-900 mb-2">
+                テンプレート管理
+              </h3>
+              <p className="text-sm text-gray-600">
+                カスタムテンプレートを作成・編集
+              </p>
+            </a>
           </div>
+
+          {/* Custom Templates Section */}
+          {customTemplates.length > 0 && (
+            <div>
+              <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
+                <FileText className="w-5 h-5" />
+                カスタムテンプレートから選択
+              </h3>
+              <div className="grid md:grid-cols-2 gap-4">
+                {customTemplates.map((template) => (
+                  <button
+                    key={template.templateId}
+                    onClick={() => handleCustomTemplateSelect(template)}
+                    className="p-4 border rounded-lg hover:border-blue-500 hover:bg-blue-50 transition-colors text-left"
+                  >
+                    <h4 className="font-semibold text-gray-900 mb-1">{template.name}</h4>
+                    <p className="text-sm text-gray-600 mb-2">{template.description}</p>
+                    <div className="flex items-center gap-2 text-xs text-gray-500">
+                      <span className="bg-gray-100 px-2 py-1 rounded">
+                        {template.category}
+                      </span>
+                      <span>{template.content.clauses.length} 条項</span>
+                    </div>
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
       </div>
     );

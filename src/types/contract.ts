@@ -42,6 +42,17 @@ export interface Contract {
   transactionDate?: Date;
   transactionAmount?: number;
   counterpartyTaxId?: string;
+  
+  // AAM Accounting System Integration
+  accountingIntegration?: {
+    invoiceId?: string;
+    invoiceNumber?: string;
+    estimateId?: string;
+    estimateNumber?: string;
+    accountingSystemUrl?: string;
+    syncStatus?: 'synced' | 'pending' | 'error';
+    lastSyncedAt?: Date;
+  };
 }
 
 export interface ContractParty {
