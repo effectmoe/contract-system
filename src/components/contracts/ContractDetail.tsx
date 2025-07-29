@@ -6,7 +6,7 @@ import {
   FileText, Download, Edit, Send, Shield, MessageSquare, 
   Brain, Calendar, Users, AlertCircle, CheckCircle,
   ChevronLeft, Award, Link2, Receipt, FileSpreadsheet, 
-  RefreshCw, ExternalLink, Trash2
+  RefreshCw, ExternalLink, Trash2, AlertTriangle
 } from 'lucide-react';
 import { Contract } from '@/types/contract';
 import { CONTRACT_STATUS_LABELS, CONTRACT_TYPE_LABELS, STATUS_COLORS } from '@/lib/utils/constants';
