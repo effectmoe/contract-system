@@ -313,6 +313,28 @@ export async function DELETE(
 
     const { id } = await params;
     
+    // Demo mode - simulate deletion
+    const isActuallyDemo = !process.env.MONGODB_URI || process.env.MONGODB_URI === 'demo-mode' || process.env.MONGODB_URI.includes('your-cluster');
+    
+    if (config.isDemo || isActuallyDemo) {
+      const contractIndex = demoContracts.findIndex(c => c.contractId === id);
+      
+      if (contractIndex === -1) {
+        return NextResponse.json(
+          { error: ERROR_MESSAGES.CONTRACT_NOT_FOUND },
+          { status: 404 }
+        );
+      }
+      
+      // Remove from demo contracts array (simulating deletion)
+      demoContracts.splice(contractIndex, 1);
+      
+      return NextResponse.json({ 
+        message: '契約書が削除されました',
+        success: true 
+      });
+    }
+    
     const contractService = await getContractService();
 
     // Check if contract exists
@@ -327,20 +349,10 @@ export async function DELETE(
       );
     }
 
-    // Don't allow deletion of completed contracts
-    if (existingContract.status === 'completed') {
-      return NextResponse.json(
-        { error: '完了済みの契約は削除できません' },
-        { status: 400 }
-      );
-    }
-
-    // Soft delete by updating status
-    const result = await contractService.updateContractStatus(
-      id,
-      'cancelled',
-      'system' // TODO: Get from auth
-    );
+    // Hard delete (permanent removal)
+    const result = await contractService['contracts'].deleteOne({ 
+      contractId: id 
+    });
 
     if (!result) {
       return NextResponse.json(
@@ -349,8 +361,20 @@ export async function DELETE(
       );
     }
 
+    // Log deletion action
+    await contractService['auditLogs'].create({
+      id: `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+      action: 'deleted',
+      performedBy: 'system', // TODO: Get from auth
+      performedAt: new Date(),
+      details: { 
+        contractId: id,
+        title: existingContract.title
+      },
+    });
+
     return NextResponse.json({ 
-      message: '契約がキャンセルされました',
+      message: '契約書が削除されました',
       success: true 
     });
   } catch (error) {
