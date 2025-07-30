@@ -3,79 +3,31 @@ import { ContractTemplate } from '@/types/template';
 import { getKVStore } from '@/lib/db/kv';
 import { sampleTemplates } from '@/lib/db/template-store';
 
-// Force rebuild: 2025-07-30-05:30
+// Force rebuild: 2025-07-30-05:40
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  try {
-    const resolvedParams = await params;
-    const id = resolvedParams.id;
-    
-    // For now, skip all other logic and directly return template
-    const directTemplate = sampleTemplates.find(t => t.templateId === id);
-    if (directTemplate) {
-      return NextResponse.json({
-        success: true,
-        data: directTemplate,
-        isDemo: true
-      });
-    }
-    const kv = await getKVStore();
-    
-    // Check if KV is available
-    const kvUrl = process.env.KV_REST_API_URL;
-    const kvToken = process.env.KV_REST_API_TOKEN;
-    const isKVConfigured = kvUrl && kvToken && !kvUrl.includes('your-kv-instance') && kvUrl !== 'demo-mode';
-    
-    console.log('Environment check:', { kvUrl: kvUrl ? 'SET' : 'NOT_SET', kvToken: kvToken ? 'SET' : 'NOT_SET', isKVConfigured });
-    
-    let templates: ContractTemplate[] = [];
-    
-    let template: ContractTemplate | undefined | null = null;
-    
-    if (!isKVConfigured) {
-      // Demo mode - search directly from sample templates
-      console.log('Debug: Looking for template ID:', id);
-      console.log('Debug: Available templates:', sampleTemplates.map(t => t.templateId));
-      template = sampleTemplates.find(t => t.templateId === id);
-      console.log('Debug: Found template:', template ? 'YES' : 'NO');
-    } else {
-      // Production mode - use KV store
-      templates = await kv.get<ContractTemplate[]>('templates') || [];
-      template = templates.find(t => t.templateId === id);
-    }
-
-    if (!template) {
-      // Force return with full debug info
-      return NextResponse.json({
-        success: false,
-        error: 'Template not found - Updated 2025-07-30-05:31',
-        searchId: id,
-        isKVConfigured,
-        sampleTemplatesLength: sampleTemplates.length,
-        availableIds: sampleTemplates.map(t => t.templateId),
-        kvUrl: process.env.KV_REST_API_URL ? 'SET' : 'NOT_SET'
-      }, { status: 404 });
-    }
-
-    return NextResponse.json({ 
-      success: true, 
-      data: template,
-      isDemo: !isKVConfigured
-    });
-  } catch (error) {
-    console.error('Failed to fetch template:', error);
-    return NextResponse.json(
-      { 
-        success: false, 
-        error: 'Failed to fetch template',
-        detail: error instanceof Error ? error.message : String(error),
-        stack: error instanceof Error ? error.stack : undefined
-      },
-      { status: 500 }
-    );
+  const resolvedParams = await params;
+  const id = resolvedParams.id;
+  
+  // Always use sample templates for now
+  const template = sampleTemplates.find(t => t.templateId === id);
+  
+  if (!template) {
+    return NextResponse.json({
+      success: false,
+      error: 'Template not found in sample data',
+      requestedId: id,
+      availableTemplates: sampleTemplates.map(t => ({ id: t.templateId, name: t.name }))
+    }, { status: 404 });
   }
+  
+  return NextResponse.json({
+    success: true,
+    data: template,
+    isDemo: true
+  });
 }
 
 export async function PATCH(
