@@ -5,11 +5,15 @@
   "env": {
     "NODE_ENV": "production",
     "PUPPETEER_SKIP_CHROMIUM_DOWNLOAD": "true",
-    "PUPPETEER_EXECUTABLE_PATH": "/opt/chromium"
+    "PUPPETEER_EXECUTABLE_PATH": "/opt/chromium",
+    "VERCEL_FORCE_NO_BUILD_CACHE": "1"
   },
   "functions": {
     "src/app/api/contracts/[id]/pdf/route.ts": {
       "maxDuration": 30
+    },
+    "src/app/api/templates/[id]/route.ts": {
+      "maxDuration": 10
     }
   }
 }
