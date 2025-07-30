@@ -69,7 +69,7 @@ export const getDemoWarning = () => {
   if (!isDemoMode()) return null;
   
   return {
-    message: 'デモモードで実行中です。データは保存されません。',
-    details: '本番環境では適切な環境変数を設定してください。',
+    message: 'デモモードで実行中です。データはメモリ内に一時保存されます。',
+    details: 'ページを再読み込みするとデータは初期状態に戻ります。本番環境では適切な環境変数を設定してください。',
   };
 };

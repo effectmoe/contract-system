@@ -4,7 +4,7 @@ import { Contract, ContractSearchParams } from '@/types/contract';
 import { rateLimiter } from '@/lib/db/kv';
 import { ERROR_MESSAGES } from '@/lib/utils/constants';
 import { config } from '@/lib/config/env';
-import { demoContracts } from '@/lib/db/demo-data';
+import { demoContractStore } from '@/lib/db/demo-store';
 
 // GET /api/contracts - Get all contracts with pagination and filtering
 export async function GET(request: NextRequest) {
@@ -31,21 +31,23 @@ export async function GET(request: NextRequest) {
       sortOrder: (searchParams.get('sortOrder') || 'desc') as 'asc' | 'desc',
     };
 
-    // Demo mode - return mock data
+    // Demo mode - use in-memory store
     const isActuallyDemo = !process.env.MONGODB_URI || process.env.MONGODB_URI === 'demo-mode' || process.env.MONGODB_URI.includes('your-cluster');
     
     if (config.isDemo || isActuallyDemo) {
-      const result = {
-        data: demoContracts,
-        pagination: {
-          page: 1,
-          limit: 20,
-          total: demoContracts.length,
-          totalPages: 1,
-          hasNext: false,
-          hasPrev: false,
-        },
+      const filter = {
+        status: params.status,
+        type: params.type,
+        query: params.query,
       };
+      
+      const result = demoContractStore.getPaginated({
+        page: params.page || 1,
+        limit: params.limit || 20,
+        filter,
+        sort: { [params.sortBy || 'createdAt']: params.sortOrder === 'asc' ? 1 : -1 },
+      });
+      
       return NextResponse.json(result);
     }
 
@@ -123,6 +125,14 @@ export async function POST(request: NextRequest) {
       createdAt: new Date(),
       updatedAt: new Date(),
     };
+
+    // Demo mode - use in-memory store
+    const isActuallyDemo = !process.env.MONGODB_URI || process.env.MONGODB_URI === 'demo-mode' || process.env.MONGODB_URI.includes('your-cluster');
+    
+    if (config.isDemo || isActuallyDemo) {
+      const newContract = demoContractStore.create(contract);
+      return NextResponse.json(newContract, { status: 201 });
+    }
 
     const contractService = await getContractService();
     const newContract = await contractService.createContract(contract, userId);

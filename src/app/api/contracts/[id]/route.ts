@@ -3,7 +3,7 @@ import { getContractService } from '@/lib/db/mongodb';
 import { rateLimiter } from '@/lib/db/kv';
 import { ERROR_MESSAGES, SUCCESS_MESSAGES } from '@/lib/utils/constants';
 import { config } from '@/lib/config/env';
-import { demoContracts } from '@/lib/db/demo-data';
+import { demoContractStore } from '@/lib/db/demo-store';
 
 // GET /api/contracts/[id] - Get single contract
 export async function GET(
@@ -24,11 +24,11 @@ export async function GET(
 
     const { id } = await params;
     
-    // Demo mode - return mock data
+    // Demo mode - use in-memory store
     const isActuallyDemo = !process.env.MONGODB_URI || process.env.MONGODB_URI === 'demo-mode' || process.env.MONGODB_URI.includes('your-cluster');
     
     if (config.isDemo || isActuallyDemo) {
-      const contract = demoContracts.find(c => c.contractId === id);
+      const contract = demoContractStore.get(id);
       
       if (!contract) {
         return NextResponse.json(
@@ -175,20 +175,18 @@ export async function PATCH(
     const { id } = await params;
     const body = await request.json();
     
-    // Demo mode - simulate update
+    // Demo mode - use in-memory store
     const isActuallyDemo = !process.env.MONGODB_URI || process.env.MONGODB_URI === 'demo-mode' || process.env.MONGODB_URI.includes('your-cluster');
     
     if (config.isDemo || isActuallyDemo) {
-      const contractIndex = demoContracts.findIndex(c => c.contractId === id);
+      const contract = demoContractStore.get(id);
       
-      if (contractIndex === -1) {
+      if (!contract) {
         return NextResponse.json(
           { error: ERROR_MESSAGES.CONTRACT_NOT_FOUND },
           { status: 404 }
         );
       }
-
-      const contract = demoContracts[contractIndex];
 
       // Prevent updating completed contracts
       if (contract.status === 'completed') {
@@ -206,14 +204,9 @@ export async function PATCH(
         );
       }
 
-      // Simulate update in demo mode (won't persist)
-      const updatedContract = {
-        ...contract,
-        ...body,
-        updatedAt: new Date(),
-      };
+      // Update in demo store
+      const updatedContract = demoContractStore.update(id, body);
 
-      // In demo mode, just return success without actually updating
       return NextResponse.json({ 
         message: SUCCESS_MESSAGES.CONTRACT_UPDATED,
         success: true,
@@ -313,21 +306,28 @@ export async function DELETE(
 
     const { id } = await params;
     
-    // Demo mode - simulate deletion
+    // Demo mode - use in-memory store
     const isActuallyDemo = !process.env.MONGODB_URI || process.env.MONGODB_URI === 'demo-mode' || process.env.MONGODB_URI.includes('your-cluster');
     
     if (config.isDemo || isActuallyDemo) {
-      const contractIndex = demoContracts.findIndex(c => c.contractId === id);
+      const contract = demoContractStore.get(id);
       
-      if (contractIndex === -1) {
+      if (!contract) {
         return NextResponse.json(
           { error: ERROR_MESSAGES.CONTRACT_NOT_FOUND },
           { status: 404 }
         );
       }
       
-      // Remove from demo contracts array (simulating deletion)
-      demoContracts.splice(contractIndex, 1);
+      // Delete from demo store
+      const deleted = demoContractStore.delete(id);
+      
+      if (!deleted) {
+        return NextResponse.json(
+          { error: ERROR_MESSAGES.GENERIC },
+          { status: 500 }
+        );
+      }
       
       return NextResponse.json({ 
         message: '契約書が削除されました',
