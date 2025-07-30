@@ -5,7 +5,8 @@ import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { 
   Save, X, Plus, Trash2, MoveUp, MoveDown,
-  FileText, Tag, Info, Variable
+  FileText, Tag, Info, Variable, Eye, EyeOff,
+  Maximize2, Minimize2, RotateCw
 } from 'lucide-react';
 import { ContractTemplate } from '@/types/template';
 
@@ -18,10 +19,30 @@ export default function EditTemplatePage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  
+  // Preview state
+  const [showPreview, setShowPreview] = useState(true);
+  const [previewValues, setPreviewValues] = useState<Record<string, any>>({});
+  const [activeTab, setActiveTab] = useState<'basic' | 'variables' | 'clauses'>('basic');
+  const [previewMode, setPreviewMode] = useState<'split' | 'fullscreen'>('split');
 
   useEffect(() => {
     fetchTemplate();
   }, [templateId]);
+
+  useEffect(() => {
+    // Initialize preview values with default values
+    if (template) {
+      const defaults: Record<string, any> = {};
+      template.variables.forEach(variable => {
+        defaults[variable.name] = variable.defaultValue || 
+          (variable.type === 'number' ? 0 : 
+           variable.type === 'date' ? new Date().toISOString().split('T')[0] : 
+           `[${variable.displayName}]`);
+      });
+      setPreviewValues(defaults);
+    }
+  }, [template]);
 
   const fetchTemplate = async () => {
     try {
@@ -196,6 +217,37 @@ export default function EditTemplatePage() {
     });
   };
 
+  const renderPreview = () => {
+    if (!template) return null;
+
+    const replaceVariables = (text: string) => {
+      let result = text;
+      template.variables.forEach(variable => {
+        const value = previewValues[variable.name] || `[${variable.displayName}]`;
+        const regex = new RegExp(`\\{\\{\\s*${variable.name}\\s*\\}\\}`, 'g');
+        result = result.replace(regex, value);
+      });
+      return result;
+    };
+
+    return (
+      <div className="prose max-w-none">
+        <h1 className="text-2xl font-bold mb-6">{template.content.title}</h1>
+        
+        {template.content.clauses.map((clause, index) => (
+          <div key={clause.id} className="mb-6">
+            <h3 className="text-lg font-semibold mb-2">
+              第{index + 1}条（{clause.title}）
+            </h3>
+            <div className="whitespace-pre-wrap text-gray-700">
+              {replaceVariables(clause.content)}
+            </div>
+          </div>
+        ))}
+      </div>
+    );
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
@@ -218,260 +270,362 @@ export default function EditTemplatePage() {
   }
 
   return (
-    <div className="container mx-auto px-4 py-8">
-      {/* Header */}
-      <div className="flex justify-between items-center mb-8">
-        <h1 className="text-3xl font-bold text-gray-900">テンプレート編集</h1>
-        <div className="flex gap-4">
-          <Link
-            href="/contracts/templates"
-            className="btn-secondary flex items-center gap-2"
-          >
-            <X className="w-4 h-4" />
-            キャンセル
-          </Link>
-          <button
-            onClick={handleSave}
-            disabled={saving}
-            className="btn-primary flex items-center gap-2"
-          >
-            <Save className="w-4 h-4" />
-            {saving ? '保存中...' : '保存'}
-          </button>
-        </div>
-      </div>
-
-      {/* Basic Information */}
-      <div className="bg-white rounded-lg shadow p-6 mb-6">
-        <h2 className="text-xl font-semibold mb-4 flex items-center gap-2">
-          <Info className="w-5 h-5" />
-          基本情報
-        </h2>
-        
-        <div className="grid md:grid-cols-2 gap-6">
-          <div>
-            <label className="label">テンプレート名</label>
-            <input
-              type="text"
-              className="input"
-              value={template.name}
-              onChange={(e) => setTemplate({ ...template, name: e.target.value })}
-            />
-          </div>
-          
-          <div>
-            <label className="label">カテゴリ</label>
-            <input
-              type="text"
-              className="input"
-              value={template.category}
-              onChange={(e) => setTemplate({ ...template, category: e.target.value })}
-            />
-          </div>
-          
-          <div className="md:col-span-2">
-            <label className="label">説明</label>
-            <textarea
-              className="input min-h-[100px]"
-              value={template.description || ''}
-              onChange={(e) => setTemplate({ ...template, description: e.target.value })}
-            />
-          </div>
-          
-          <div className="md:col-span-2">
-            <label className="label flex items-center gap-2">
-              <Tag className="w-4 h-4" />
-              タグ
-            </label>
-            <div className="flex flex-wrap gap-2 mb-2">
-              {template.tags?.map((tag) => (
-                <span
-                  key={tag}
-                  className="inline-flex items-center px-3 py-1 rounded-full text-sm bg-blue-100 text-blue-800"
-                >
-                  {tag}
-                  <button
-                    onClick={() => removeTag(tag)}
-                    className="ml-2 text-blue-600 hover:text-blue-800"
-                  >
-                    <X className="w-3 h-3" />
-                  </button>
-                </span>
-              ))}
+    <div className="min-h-screen bg-gray-50">
+      {/* Page Header */}
+      <div className="bg-white shadow-sm border-b mb-6">
+        <div className="container mx-auto px-4 py-4">
+          <div className="flex justify-between items-center">
+            <h1 className="text-2xl font-bold text-gray-900">テンプレート編集</h1>
+            <div className="flex gap-4">
               <button
-                onClick={addTag}
-                className="inline-flex items-center px-3 py-1 rounded-full text-sm bg-gray-100 text-gray-700 hover:bg-gray-200"
+                onClick={() => setShowPreview(!showPreview)}
+                className="btn-secondary flex items-center gap-2"
               >
-                <Plus className="w-3 h-3 mr-1" />
-                タグを追加
+                {showPreview ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                {showPreview ? 'プレビューを隠す' : 'プレビューを表示'}
+              </button>
+              <Link
+                href="/contracts/templates"
+                className="btn-secondary flex items-center gap-2"
+              >
+                <X className="w-4 h-4" />
+                キャンセル
+              </Link>
+              <button
+                onClick={handleSave}
+                disabled={saving}
+                className="btn-primary flex items-center gap-2"
+              >
+                <Save className="w-4 h-4" />
+                {saving ? '保存中...' : '保存'}
               </button>
             </div>
           </div>
         </div>
       </div>
 
-      {/* Variables */}
-      <div className="bg-white rounded-lg shadow p-6 mb-6">
-        <div className="flex justify-between items-center mb-4">
-          <h2 className="text-xl font-semibold flex items-center gap-2">
-            <Variable className="w-5 h-5" />
-            変数
-          </h2>
-          <button
-            onClick={addVariable}
-            className="btn-secondary flex items-center gap-2 text-sm"
-          >
-            <Plus className="w-4 h-4" />
-            変数を追加
-          </button>
-        </div>
-        
-        <div className="space-y-4">
-          {template.variables.map((variable, index) => (
-            <div key={index} className="border rounded-lg p-4">
-              <div className="grid md:grid-cols-4 gap-4">
-                <div>
-                  <label className="label text-sm">変数名</label>
-                  <input
-                    type="text"
-                    className="input"
-                    value={variable.name}
-                    onChange={(e) => updateVariable(index, 'name', e.target.value)}
-                  />
-                </div>
-                
-                <div>
-                  <label className="label text-sm">表示名</label>
-                  <input
-                    type="text"
-                    className="input"
-                    value={variable.displayName}
-                    onChange={(e) => updateVariable(index, 'displayName', e.target.value)}
-                  />
-                </div>
-                
-                <div>
-                  <label className="label text-sm">タイプ</label>
-                  <select
-                    className="input"
-                    value={variable.type}
-                    onChange={(e) => updateVariable(index, 'type', e.target.value)}
-                  >
-                    <option value="text">テキスト</option>
-                    <option value="number">数値</option>
-                    <option value="date">日付</option>
-                    <option value="select">選択</option>
-                  </select>
-                </div>
-                
-                <div className="flex items-end">
-                  <button
-                    onClick={() => deleteVariable(index)}
-                    className="btn-secondary text-red-600 hover:bg-red-50"
-                  >
-                    <Trash2 className="w-4 h-4" />
-                  </button>
-                </div>
-              </div>
-              
-              <div className="grid md:grid-cols-2 gap-4 mt-4">
-                <div>
-                  <label className="label text-sm">デフォルト値</label>
-                  <input
-                    type="text"
-                    className="input"
-                    value={variable.defaultValue || ''}
-                    onChange={(e) => updateVariable(index, 'defaultValue', e.target.value)}
-                  />
-                </div>
-                
-                <div className="flex items-end">
-                  <label className="flex items-center gap-2">
-                    <input
-                      type="checkbox"
-                      checked={variable.required}
-                      onChange={(e) => updateVariable(index, 'required', e.target.checked)}
-                    />
-                    <span className="text-sm">必須項目</span>
-                  </label>
-                </div>
-              </div>
+      <div className={`container mx-auto px-4 py-6 ${showPreview ? 'grid grid-cols-1 lg:grid-cols-2 gap-6' : ''}`}>
+        {/* Editor Panel */}
+        <div className={showPreview ? '' : 'max-w-4xl mx-auto'}>
+          {/* Tab Navigation */}
+          <div className="bg-white rounded-lg shadow mb-4">
+            <div className="border-b">
+              <nav className="flex -mb-px">
+                <button
+                  onClick={() => setActiveTab('basic')}
+                  className={`px-6 py-3 text-sm font-medium ${
+                    activeTab === 'basic'
+                      ? 'border-b-2 border-blue-500 text-blue-600'
+                      : 'text-gray-500 hover:text-gray-700'
+                  }`}
+                >
+                  基本情報
+                </button>
+                <button
+                  onClick={() => setActiveTab('variables')}
+                  className={`px-6 py-3 text-sm font-medium ${
+                    activeTab === 'variables'
+                      ? 'border-b-2 border-blue-500 text-blue-600'
+                      : 'text-gray-500 hover:text-gray-700'
+                  }`}
+                >
+                  変数設定
+                </button>
+                <button
+                  onClick={() => setActiveTab('clauses')}
+                  className={`px-6 py-3 text-sm font-medium ${
+                    activeTab === 'clauses'
+                      ? 'border-b-2 border-blue-500 text-blue-600'
+                      : 'text-gray-500 hover:text-gray-700'
+                  }`}
+                >
+                  条項編集
+                </button>
+              </nav>
             </div>
-          ))}
-        </div>
-      </div>
+          </div>
 
-      {/* Clauses */}
-      <div className="bg-white rounded-lg shadow p-6">
-        <div className="flex justify-between items-center mb-4">
-          <h2 className="text-xl font-semibold flex items-center gap-2">
-            <FileText className="w-5 h-5" />
-            条項
-          </h2>
-          <button
-            onClick={addClause}
-            className="btn-secondary flex items-center gap-2 text-sm"
-          >
-            <Plus className="w-4 h-4" />
-            条項を追加
-          </button>
-        </div>
-        
-        <div className="space-y-4">
-          {template.content.clauses.map((clause, index) => (
-            <div key={clause.id} className="border rounded-lg p-4">
-              <div className="flex justify-between items-start mb-4">
-                <input
-                  type="text"
-                  className="input text-lg font-semibold"
-                  value={clause.title}
-                  onChange={(e) => updateClause(index, 'title', e.target.value)}
-                />
+          {/* Tab Content */}
+          <div className="bg-white rounded-lg shadow">
+            {activeTab === 'basic' && (
+              <div className="p-6">
+                <h2 className="text-xl font-semibold mb-4 flex items-center gap-2">
+                  <Info className="w-5 h-5" />
+                  基本情報
+                </h2>
                 
-                <div className="flex gap-2 ml-4">
-                  <button
-                    onClick={() => moveClause(index, 'up')}
-                    disabled={index === 0}
-                    className="p-2 text-gray-600 hover:bg-gray-100 rounded disabled:opacity-50"
-                  >
-                    <MoveUp className="w-4 h-4" />
-                  </button>
-                  <button
-                    onClick={() => moveClause(index, 'down')}
-                    disabled={index === template.content.clauses.length - 1}
-                    className="p-2 text-gray-600 hover:bg-gray-100 rounded disabled:opacity-50"
-                  >
-                    <MoveDown className="w-4 h-4" />
-                  </button>
-                  <button
-                    onClick={() => deleteClause(index)}
-                    className="p-2 text-red-600 hover:bg-red-50 rounded"
-                  >
-                    <Trash2 className="w-4 h-4" />
-                  </button>
+                <div className="space-y-4">
+                  <div>
+                    <label className="label">テンプレート名</label>
+                    <input
+                      type="text"
+                      className="input"
+                      value={template.name}
+                      onChange={(e) => setTemplate({ ...template, name: e.target.value })}
+                    />
+                  </div>
+                  
+                  <div>
+                    <label className="label">カテゴリ</label>
+                    <input
+                      type="text"
+                      className="input"
+                      value={template.category}
+                      onChange={(e) => setTemplate({ ...template, category: e.target.value })}
+                    />
+                  </div>
+                  
+                  <div>
+                    <label className="label">説明</label>
+                    <textarea
+                      className="input min-h-[100px]"
+                      value={template.description || ''}
+                      onChange={(e) => setTemplate({ ...template, description: e.target.value })}
+                    />
+                  </div>
+                  
+                  <div>
+                    <label className="label flex items-center gap-2">
+                      <Tag className="w-4 h-4" />
+                      タグ
+                    </label>
+                    <div className="flex flex-wrap gap-2 mb-2">
+                      {template.tags?.map((tag) => (
+                        <span
+                          key={tag}
+                          className="inline-flex items-center px-3 py-1 rounded-full text-sm bg-blue-100 text-blue-800"
+                        >
+                          {tag}
+                          <button
+                            onClick={() => removeTag(tag)}
+                            className="ml-2 text-blue-600 hover:text-blue-800"
+                          >
+                            <X className="w-3 h-3" />
+                          </button>
+                        </span>
+                      ))}
+                      <button
+                        onClick={addTag}
+                        className="inline-flex items-center px-3 py-1 rounded-full text-sm bg-gray-100 text-gray-700 hover:bg-gray-200"
+                      >
+                        <Plus className="w-3 h-3 mr-1" />
+                        タグを追加
+                      </button>
+                    </div>
+                  </div>
                 </div>
               </div>
-              
-              <textarea
-                className="input min-h-[150px] font-mono text-sm"
-                value={clause.content}
-                onChange={(e) => updateClause(index, 'content', e.target.value)}
-                placeholder="条項の内容を入力してください。変数は {{変数名}} の形式で使用できます。"
-              />
-              
-              <div className="mt-4">
-                <label className="flex items-center gap-2">
-                  <input
-                    type="checkbox"
-                    checked={clause.isRequired}
-                    onChange={(e) => updateClause(index, 'isRequired', e.target.checked)}
-                  />
-                  <span className="text-sm">必須条項</span>
-                </label>
+            )}
+
+            {activeTab === 'variables' && (
+              <div className="p-6">
+                <div className="flex justify-between items-center mb-4">
+                  <h2 className="text-xl font-semibold flex items-center gap-2">
+                    <Variable className="w-5 h-5" />
+                    変数設定
+                  </h2>
+                  <button
+                    onClick={addVariable}
+                    className="btn-secondary flex items-center gap-2 text-sm"
+                  >
+                    <Plus className="w-4 h-4" />
+                    変数を追加
+                  </button>
+                </div>
+                
+                <div className="space-y-4">
+                  {template.variables.map((variable, index) => (
+                    <div key={index} className="border rounded-lg p-4">
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                          <label className="label text-sm">変数名（システム内部用）</label>
+                          <input
+                            type="text"
+                            className="input"
+                            value={variable.name}
+                            onChange={(e) => updateVariable(index, 'name', e.target.value)}
+                            placeholder="例: companyName"
+                          />
+                        </div>
+                        
+                        <div>
+                          <label className="label text-sm">表示名（ユーザー向け）</label>
+                          <input
+                            type="text"
+                            className="input"
+                            value={variable.displayName}
+                            onChange={(e) => updateVariable(index, 'displayName', e.target.value)}
+                            placeholder="例: 会社名"
+                          />
+                        </div>
+                        
+                        <div>
+                          <label className="label text-sm">タイプ</label>
+                          <select
+                            className="input"
+                            value={variable.type}
+                            onChange={(e) => updateVariable(index, 'type', e.target.value)}
+                          >
+                            <option value="text">テキスト</option>
+                            <option value="number">数値</option>
+                            <option value="date">日付</option>
+                            <option value="select">選択</option>
+                          </select>
+                        </div>
+                        
+                        <div>
+                          <label className="label text-sm">デフォルト値</label>
+                          <input
+                            type="text"
+                            className="input"
+                            value={variable.defaultValue || ''}
+                            onChange={(e) => updateVariable(index, 'defaultValue', e.target.value)}
+                          />
+                        </div>
+                      </div>
+                      
+                      <div className="flex justify-between items-center mt-4">
+                        <label className="flex items-center gap-2">
+                          <input
+                            type="checkbox"
+                            checked={variable.required}
+                            onChange={(e) => updateVariable(index, 'required', e.target.checked)}
+                          />
+                          <span className="text-sm">必須項目</span>
+                        </label>
+                        
+                        <button
+                          onClick={() => deleteVariable(index)}
+                          className="btn-secondary text-red-600 hover:bg-red-50 flex items-center gap-1"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                          削除
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {activeTab === 'clauses' && (
+              <div className="p-6">
+                <div className="flex justify-between items-center mb-4">
+                  <h2 className="text-xl font-semibold flex items-center gap-2">
+                    <FileText className="w-5 h-5" />
+                    条項編集
+                  </h2>
+                  <button
+                    onClick={addClause}
+                    className="btn-secondary flex items-center gap-2 text-sm"
+                  >
+                    <Plus className="w-4 h-4" />
+                    条項を追加
+                  </button>
+                </div>
+                
+                <div className="space-y-4">
+                  {template.content.clauses.map((clause, index) => (
+                    <div key={clause.id} className="border rounded-lg p-4">
+                      <div className="flex justify-between items-start mb-4">
+                        <input
+                          type="text"
+                          className="input flex-1 text-lg font-semibold"
+                          value={clause.title}
+                          onChange={(e) => updateClause(index, 'title', e.target.value)}
+                          placeholder="条項タイトル"
+                        />
+                        
+                        <div className="flex gap-2 ml-4">
+                          <button
+                            onClick={() => moveClause(index, 'up')}
+                            disabled={index === 0}
+                            className="p-2 text-gray-600 hover:bg-gray-100 rounded disabled:opacity-50"
+                            title="上に移動"
+                          >
+                            <MoveUp className="w-4 h-4" />
+                          </button>
+                          <button
+                            onClick={() => moveClause(index, 'down')}
+                            disabled={index === template.content.clauses.length - 1}
+                            className="p-2 text-gray-600 hover:bg-gray-100 rounded disabled:opacity-50"
+                            title="下に移動"
+                          >
+                            <MoveDown className="w-4 h-4" />
+                          </button>
+                          <button
+                            onClick={() => deleteClause(index)}
+                            className="p-2 text-red-600 hover:bg-red-50 rounded"
+                            title="削除"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </div>
+                      </div>
+                      
+                      <textarea
+                        className="input min-h-[120px] font-mono text-sm"
+                        value={clause.content}
+                        onChange={(e) => updateClause(index, 'content', e.target.value)}
+                        placeholder="条項の内容を入力してください。変数は {{変数名}} の形式で使用できます。"
+                      />
+                      
+                      <div className="mt-4">
+                        <label className="flex items-center gap-2">
+                          <input
+                            type="checkbox"
+                            checked={clause.isRequired}
+                            onChange={(e) => updateClause(index, 'isRequired', e.target.checked)}
+                          />
+                          <span className="text-sm">必須条項</span>
+                        </label>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Preview Panel */}
+        {showPreview && (
+          <div className="bg-white rounded-lg shadow overflow-hidden">
+            <div className="bg-gray-100 px-6 py-4 border-b">
+              <h2 className="text-lg font-semibold flex items-center gap-2">
+                <Eye className="w-5 h-5" />
+                プレビュー
+              </h2>
+            </div>
+            
+            {/* Preview Values Input */}
+            <div className="p-6 border-b bg-gray-50">
+              <h3 className="text-sm font-medium text-gray-700 mb-3">プレビュー用の値を入力</h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                {template.variables.map((variable) => (
+                  <div key={variable.name}>
+                    <label className="text-sm text-gray-600">{variable.displayName}</label>
+                    <input
+                      type={variable.type === 'number' ? 'number' : variable.type === 'date' ? 'date' : 'text'}
+                      className="input text-sm"
+                      value={previewValues[variable.name] || ''}
+                      onChange={(e) => setPreviewValues({
+                        ...previewValues,
+                        [variable.name]: e.target.value
+                      })}
+                      placeholder={`${variable.displayName}を入力`}
+                    />
+                  </div>
+                ))}
               </div>
             </div>
-          ))}
-        </div>
+            
+            {/* Preview Content */}
+            <div className="p-6 overflow-auto" style={{ maxHeight: 'calc(100vh - 300px)' }}>
+              {renderPreview()}
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
