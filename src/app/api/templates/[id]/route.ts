@@ -8,7 +8,18 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { id } = await params;
+    const resolvedParams = await params;
+    const id = resolvedParams.id;
+    
+    // Return test response immediately to check if endpoint is reached
+    if (id === 'debug-test') {
+      return NextResponse.json({
+        success: true,
+        message: 'Debug test successful',
+        receivedId: id,
+        timestamp: new Date().toISOString()
+      });
+    }
     const kv = await getKVStore();
     
     // Check if KV is available
