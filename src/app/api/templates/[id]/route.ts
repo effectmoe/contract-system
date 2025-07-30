@@ -21,8 +21,8 @@ export async function GET(
     let template: ContractTemplate | undefined | null = null;
     
     if (!isKVConfigured) {
-      // Demo mode - use in-memory storage
-      template = demoTemplateStore.findById(id);
+      // Demo mode - search directly from sample templates
+      template = sampleTemplates.find(t => t.templateId === id);
     } else {
       // Production mode - use KV store
       templates = await kv.get<ContractTemplate[]>('templates') || [];
@@ -65,16 +65,17 @@ export async function PATCH(
     const isKVConfigured = kvUrl && kvToken && !kvUrl.includes('your-kv-instance') && kvUrl !== 'demo-mode';
     
     if (!isKVConfigured) {
-      // Demo mode - use in-memory storage
-      demoTemplateStore.ensureInitialized();
-      const updatedTemplate = demoTemplateStore.update(id, body);
-      if (!updatedTemplate) {
+      // Demo mode - templates are read-only, return the original
+      const template = sampleTemplates.find(t => t.templateId === id);
+      if (!template) {
         return NextResponse.json(
           { success: false, error: 'Template not found' },
           { status: 404 }
         );
       }
-
+      
+      const updatedTemplate = { ...template, ...body, updatedAt: new Date() };
+      
       return NextResponse.json({ 
         success: true, 
         data: updatedTemplate,
@@ -128,11 +129,10 @@ export async function DELETE(
     const isKVConfigured = kvUrl && kvToken && !kvUrl.includes('your-kv-instance') && kvUrl !== 'demo-mode';
     
     if (!isKVConfigured) {
-      // Demo mode - use in-memory storage
-      demoTemplateStore.ensureInitialized();
-      const deleted = demoTemplateStore.delete(id);
+      // Demo mode - check if template exists but don't actually delete
+      const template = sampleTemplates.find(t => t.templateId === id);
       
-      if (!deleted) {
+      if (!template) {
         return NextResponse.json(
           { success: false, error: 'Template not found' },
           { status: 404 }
@@ -141,7 +141,7 @@ export async function DELETE(
 
       return NextResponse.json({ 
         success: true, 
-        message: 'Template deleted successfully',
+        message: 'Template deleted successfully (demo mode)',
         isDemo: true 
       });
     }

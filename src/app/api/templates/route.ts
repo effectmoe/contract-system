@@ -13,11 +13,10 @@ export async function GET(request: NextRequest) {
     const isKVConfigured = kvUrl && kvToken && !kvUrl.includes('your-kv-instance') && kvUrl !== 'demo-mode';
     
     if (!isKVConfigured) {
-      // Demo mode - use in-memory storage
-      demoTemplateStore.ensureInitialized();
+      // Demo mode - return sample templates directly
       return NextResponse.json({ 
         success: true, 
-        data: demoTemplateStore.getAll(),
+        data: sampleTemplates,
         isDemo: true 
       });
     }
