@@ -83,6 +83,8 @@ export async function GET(
     const kvToken = process.env.KV_REST_API_TOKEN;
     const isKVConfigured = kvUrl && kvToken && !kvUrl.includes('your-kv-instance') && kvUrl !== 'demo-mode';
     
+    console.log('Environment check:', { kvUrl: kvUrl ? 'SET' : 'NOT_SET', kvToken: kvToken ? 'SET' : 'NOT_SET', isKVConfigured });
+    
     let templates: ContractTemplate[] = [];
     
     let template: ContractTemplate | undefined | null = null;
@@ -122,7 +124,11 @@ export async function GET(
   } catch (error) {
     console.error('Failed to fetch template:', error);
     return NextResponse.json(
-      { success: false, error: 'Failed to fetch template' },
+      { 
+        success: false, 
+        error: 'Failed to fetch template',
+        detail: error instanceof Error ? error.message : String(error)
+      },
       { status: 500 }
     );
   }
