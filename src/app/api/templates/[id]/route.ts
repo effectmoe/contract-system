@@ -12,25 +12,12 @@ export async function GET(
     const resolvedParams = await params;
     const id = resolvedParams.id;
     
-    // Early return with actual template data to bypass all logic
-    if (id === 'nda-template') {
+    // For now, skip all other logic and directly return template
+    const directTemplate = sampleTemplates.find(t => t.templateId === id);
+    if (directTemplate) {
       return NextResponse.json({
         success: true,
-        data: {
-          templateId: 'nda-template',
-          name: '秘密保持契約書（NDA）',
-          description: '標準的な秘密保持契約書のテンプレート',
-          category: 'NDA',
-          content: {
-            title: '秘密保持契約書',
-            clauses: []
-          },
-          variables: [],
-          isActive: true,
-          createdAt: new Date(),
-          updatedAt: new Date(),
-          tags: ['秘密保持', 'NDA', '標準']
-        },
+        data: directTemplate,
         isDemo: true
       });
     }
