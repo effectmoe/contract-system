@@ -1,9 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { ContractTemplate } from '@/types/template';
 import { getKVStore } from '@/lib/db/kv';
-
-// Import the demo templates from the parent route
-import { demoTemplates, sampleTemplates } from '../route';
+import { demoTemplates, sampleTemplates } from '@/lib/db/template-store';
 
 export async function GET(
   request: NextRequest,
