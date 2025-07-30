@@ -2,8 +2,11 @@ import { NextRequest, NextResponse } from 'next/server';
 import { ContractTemplate } from '@/types/template';
 import { getKVStore } from '@/lib/db/kv';
 
+// In-memory storage for demo mode
+export let demoTemplates: ContractTemplate[] = [];
+
 // Sample templates
-const sampleTemplates: ContractTemplate[] = [
+export const sampleTemplates: ContractTemplate[] = [
   {
     templateId: 'nda-template',
     name: '秘密保持契約書（NDA）',
@@ -158,6 +161,25 @@ const sampleTemplates: ContractTemplate[] = [
 export async function GET(request: NextRequest) {
   try {
     const kv = await getKVStore();
+    
+    // Check if KV is available
+    const kvUrl = process.env.KV_REST_API_URL;
+    const kvToken = process.env.KV_REST_API_TOKEN;
+    const isKVConfigured = kvUrl && kvToken && !kvUrl.includes('your-kv-instance') && kvUrl !== 'demo-mode';
+    
+    if (!isKVConfigured) {
+      // Demo mode - use in-memory storage
+      if (demoTemplates.length === 0) {
+        demoTemplates = [...sampleTemplates];
+      }
+      return NextResponse.json({ 
+        success: true, 
+        data: demoTemplates,
+        isDemo: true 
+      });
+    }
+    
+    // Production mode - use KV store
     const templates = await kv.get<ContractTemplate[]>('templates');
 
     // Initialize with sample templates if none exist
@@ -195,6 +217,22 @@ export async function POST(request: NextRequest) {
       isActive: body.isActive !== false
     };
 
+    // Check if KV is available
+    const kvUrl = process.env.KV_REST_API_URL;
+    const kvToken = process.env.KV_REST_API_TOKEN;
+    const isKVConfigured = kvUrl && kvToken && !kvUrl.includes('your-kv-instance') && kvUrl !== 'demo-mode';
+    
+    if (!isKVConfigured) {
+      // Demo mode - use in-memory storage
+      demoTemplates.push(newTemplate);
+      return NextResponse.json({ 
+        success: true, 
+        data: newTemplate,
+        isDemo: true 
+      });
+    }
+
+    // Production mode - use KV store
     const templates = await kv.get<ContractTemplate[]>('templates') || [];
     templates.push(newTemplate);
     await kv.set('templates', templates);
