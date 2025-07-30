@@ -46,6 +46,9 @@ class TemplateStore {
 
 export const demoTemplateStore = new TemplateStore();
 
+// Initialize with sample data immediately
+demoTemplateStore.setAll([...sampleTemplates]);
+
 // Sample templates
 export const sampleTemplates: ContractTemplate[] = [
   {
