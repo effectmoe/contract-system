@@ -34,7 +34,15 @@ export async function GET(
 
     if (!template) {
       return NextResponse.json(
-        { success: false, error: 'Template not found' },
+        { 
+          success: false, 
+          error: 'Template not found',
+          debug: {
+            searchId: id,
+            isKVConfigured,
+            availableTemplates: !isKVConfigured ? sampleTemplates.map(t => t.templateId) : 'KV mode'
+          }
+        },
         { status: 404 }
       );
     }
