@@ -13,7 +13,8 @@ export async function GET(request: NextRequest) {
     const isKVConfigured = kvUrl && kvToken && !kvUrl.includes('your-kv-instance') && kvUrl !== 'demo-mode';
     
     if (!isKVConfigured) {
-      // Demo mode - use in-memory storage (already initialized)
+      // Demo mode - use in-memory storage
+      demoTemplateStore.ensureInitialized();
       return NextResponse.json({ 
         success: true, 
         data: demoTemplateStore.getAll(),

@@ -42,6 +42,12 @@ class TemplateStore {
   isEmpty(): boolean {
     return this.templates.length === 0;
   }
+  
+  ensureInitialized(): void {
+    if (this.isEmpty()) {
+      this.setAll([...sampleTemplates]);
+    }
+  }
 }
 
 export const demoTemplateStore = new TemplateStore();

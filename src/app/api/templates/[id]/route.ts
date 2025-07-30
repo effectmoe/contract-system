@@ -19,7 +19,8 @@ export async function GET(
     let templates: ContractTemplate[] = [];
     
     if (!isKVConfigured) {
-      // Demo mode - use in-memory storage (already initialized)
+      // Demo mode - use in-memory storage
+      demoTemplateStore.ensureInitialized();
       templates = demoTemplateStore.getAll();
     } else {
       // Production mode - use KV store
@@ -64,7 +65,8 @@ export async function PATCH(
     const isKVConfigured = kvUrl && kvToken && !kvUrl.includes('your-kv-instance') && kvUrl !== 'demo-mode';
     
     if (!isKVConfigured) {
-      // Demo mode - use in-memory storage (already initialized)
+      // Demo mode - use in-memory storage
+      demoTemplateStore.ensureInitialized();
       const updatedTemplate = demoTemplateStore.update(id, body);
       if (!updatedTemplate) {
         return NextResponse.json(
@@ -126,7 +128,8 @@ export async function DELETE(
     const isKVConfigured = kvUrl && kvToken && !kvUrl.includes('your-kv-instance') && kvUrl !== 'demo-mode';
     
     if (!isKVConfigured) {
-      // Demo mode - use in-memory storage (already initialized)
+      // Demo mode - use in-memory storage
+      demoTemplateStore.ensureInitialized();
       const deleted = demoTemplateStore.delete(id);
       
       if (!deleted) {
