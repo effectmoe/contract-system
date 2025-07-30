@@ -22,7 +22,10 @@ export async function GET(
     
     if (!isKVConfigured) {
       // Demo mode - search directly from sample templates
+      console.log('Debug: Looking for template ID:', id);
+      console.log('Debug: Available templates:', sampleTemplates.map(t => t.templateId));
       template = sampleTemplates.find(t => t.templateId === id);
+      console.log('Debug: Found template:', template ? 'YES' : 'NO');
     } else {
       // Production mode - use KV store
       templates = await kv.get<ContractTemplate[]>('templates') || [];
