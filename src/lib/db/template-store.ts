@@ -36,6 +36,7 @@ class TemplateStore {
   }
   
   findById(id: string): ContractTemplate | undefined {
+    this.ensureInitialized();
     return this.templates.find(t => t.templateId === id);
   }
   

@@ -18,16 +18,16 @@ export async function GET(
     
     let templates: ContractTemplate[] = [];
     
+    let template: ContractTemplate | undefined | null = null;
+    
     if (!isKVConfigured) {
       // Demo mode - use in-memory storage
-      demoTemplateStore.ensureInitialized();
-      templates = demoTemplateStore.getAll();
+      template = demoTemplateStore.findById(id);
     } else {
       // Production mode - use KV store
       templates = await kv.get<ContractTemplate[]>('templates') || [];
+      template = templates.find(t => t.templateId === id);
     }
-    
-    const template = templates.find(t => t.templateId === id);
 
     if (!template) {
       return NextResponse.json(
