@@ -3,6 +3,7 @@ import { ContractTemplate } from '@/types/template';
 import { getKVStore } from '@/lib/db/kv';
 import { sampleTemplates } from '@/lib/db/template-store';
 
+// Force rebuild: 2025-07-30-05:30
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -62,7 +63,7 @@ export async function GET(
       // Force return with full debug info
       return NextResponse.json({
         success: false,
-        error: 'Template not found',
+        error: 'Template not found - Updated 2025-07-30-05:31',
         searchId: id,
         isKVConfigured,
         sampleTemplatesLength: sampleTemplates.length,
