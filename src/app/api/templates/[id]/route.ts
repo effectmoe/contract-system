@@ -102,18 +102,16 @@ export async function GET(
     }
 
     if (!template) {
-      return NextResponse.json(
-        { 
-          success: false, 
-          error: 'Template not found',
-          debug: {
-            searchId: id,
-            isKVConfigured,
-            availableTemplates: !isKVConfigured ? sampleTemplates.map(t => t.templateId) : 'KV mode'
-          }
-        },
-        { status: 404 }
-      );
+      // Force return with full debug info
+      return NextResponse.json({
+        success: false,
+        error: 'Template not found',
+        searchId: id,
+        isKVConfigured,
+        sampleTemplatesLength: sampleTemplates.length,
+        availableIds: sampleTemplates.map(t => t.templateId),
+        kvUrl: process.env.KV_REST_API_URL ? 'SET' : 'NOT_SET'
+      }, { status: 404 });
     }
 
     return NextResponse.json({ 
