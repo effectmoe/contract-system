@@ -75,6 +75,7 @@ export default function EditTemplatePage() {
       id: `clause-${Date.now()}`,
       title: '新規条項',
       content: '',
+      isRequired: true,
       order: template.content.clauses.length,
     };
     
@@ -139,8 +140,9 @@ export default function EditTemplatePage() {
     if (!template) return;
     
     const newVariable = {
+      id: `var_${Date.now()}`,
       name: `variable_${Date.now()}`,
-      label: '新規変数',
+      displayName: '新規変数',
       type: 'text' as const,
       required: false,
       defaultValue: '',
@@ -339,12 +341,12 @@ export default function EditTemplatePage() {
                 </div>
                 
                 <div>
-                  <label className="label text-sm">ラベル</label>
+                  <label className="label text-sm">表示名</label>
                   <input
                     type="text"
                     className="input"
-                    value={variable.label}
-                    onChange={(e) => updateVariable(index, 'label', e.target.value)}
+                    value={variable.displayName}
+                    onChange={(e) => updateVariable(index, 'displayName', e.target.value)}
                   />
                 </div>
                 
@@ -456,6 +458,17 @@ export default function EditTemplatePage() {
                 onChange={(e) => updateClause(index, 'content', e.target.value)}
                 placeholder="条項の内容を入力してください。変数は {{変数名}} の形式で使用できます。"
               />
+              
+              <div className="mt-4">
+                <label className="flex items-center gap-2">
+                  <input
+                    type="checkbox"
+                    checked={clause.isRequired}
+                    onChange={(e) => updateClause(index, 'isRequired', e.target.checked)}
+                  />
+                  <span className="text-sm">必須条項</span>
+                </label>
+              </div>
             </div>
           ))}
         </div>
