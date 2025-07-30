@@ -803,6 +803,37 @@ export default function ContractDetail({ contractId }: ContractDetailProps) {
         </div>
       </div>
 
+      {/* Danger Zone - ページ最下部に配置 */}
+      <div className="mt-12 border-t pt-8">
+        <div className="card border-red-200 bg-red-50">
+          <div className="border-b border-red-200 pb-4 mb-4">
+            <h3 className="text-lg font-semibold text-red-800 flex items-center gap-2">
+              <AlertTriangle className="w-5 h-5" />
+              Danger Zone
+            </h3>
+            <p className="text-sm text-red-700 mt-1">
+              この操作は元に戻すことができません。慎重に行ってください。
+            </p>
+          </div>
+          
+          <div className="flex items-center justify-between">
+            <div>
+              <h4 className="text-sm font-medium text-red-800">契約書を削除</h4>
+              <p className="text-sm text-red-600 mt-1">
+                この契約書とすべての関連データが完全に削除されます。
+              </p>
+            </div>
+            <button
+              onClick={() => setShowDeleteModal(true)}
+              className="px-4 py-2 bg-red-600 text-white text-sm font-medium rounded-lg hover:bg-red-700 transition-colors flex items-center gap-2"
+            >
+              <Trash2 className="w-4 h-4" />
+              削除
+            </button>
+          </div>
+        </div>
+      </div>
+
       {/* Delete Confirmation Modal */}
       <DeleteConfirmModal
         isOpen={showDeleteModal}
