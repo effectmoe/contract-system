@@ -50,6 +50,16 @@ export default function EditTemplatePage() {
       const response = await fetch(`/api/templates/${templateId}`);
       
       if (!response.ok) {
+        // Fallback to template list and find the specific template
+        const listResponse = await fetch('/api/templates');
+        if (listResponse.ok) {
+          const listData = await listResponse.json();
+          const foundTemplate = listData.data?.find((t: ContractTemplate) => t.templateId === templateId);
+          if (foundTemplate) {
+            setTemplate(foundTemplate);
+            return;
+          }
+        }
         throw new Error('テンプレートの取得に失敗しました');
       }
       
