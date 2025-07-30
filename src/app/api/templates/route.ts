@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { ContractTemplate } from '@/types/template';
 import { getKVStore } from '@/lib/db/kv';
-import { demoTemplates, sampleTemplates } from '@/lib/db/template-store';
+import { demoTemplateStore, sampleTemplates } from '@/lib/db/template-store';
 
 export async function GET(request: NextRequest) {
   try {
@@ -14,12 +14,12 @@ export async function GET(request: NextRequest) {
     
     if (!isKVConfigured) {
       // Demo mode - use in-memory storage
-      if (demoTemplates.length === 0) {
-        demoTemplates = [...sampleTemplates];
+      if (demoTemplateStore.isEmpty()) {
+        demoTemplateStore.setAll([...sampleTemplates]);
       }
       return NextResponse.json({ 
         success: true, 
-        data: demoTemplates,
+        data: demoTemplateStore.getAll(),
         isDemo: true 
       });
     }
@@ -69,7 +69,7 @@ export async function POST(request: NextRequest) {
     
     if (!isKVConfigured) {
       // Demo mode - use in-memory storage
-      demoTemplates.push(newTemplate);
+      demoTemplateStore.add(newTemplate);
       return NextResponse.json({ 
         success: true, 
         data: newTemplate,

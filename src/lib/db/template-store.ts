@@ -1,7 +1,50 @@
 import { ContractTemplate } from '@/types/template';
 
 // In-memory storage for demo mode
-export let demoTemplates: ContractTemplate[] = [];
+class TemplateStore {
+  private templates: ContractTemplate[] = [];
+  
+  getAll(): ContractTemplate[] {
+    return this.templates;
+  }
+  
+  setAll(templates: ContractTemplate[]): void {
+    this.templates = templates;
+  }
+  
+  add(template: ContractTemplate): void {
+    this.templates.push(template);
+  }
+  
+  update(id: string, updates: Partial<ContractTemplate>): ContractTemplate | null {
+    const index = this.templates.findIndex(t => t.templateId === id);
+    if (index === -1) return null;
+    
+    this.templates[index] = {
+      ...this.templates[index],
+      ...updates,
+      updatedAt: new Date()
+    };
+    
+    return this.templates[index];
+  }
+  
+  delete(id: string): boolean {
+    const initialLength = this.templates.length;
+    this.templates = this.templates.filter(t => t.templateId !== id);
+    return this.templates.length < initialLength;
+  }
+  
+  findById(id: string): ContractTemplate | undefined {
+    return this.templates.find(t => t.templateId === id);
+  }
+  
+  isEmpty(): boolean {
+    return this.templates.length === 0;
+  }
+}
+
+export const demoTemplateStore = new TemplateStore();
 
 // Sample templates
 export const sampleTemplates: ContractTemplate[] = [

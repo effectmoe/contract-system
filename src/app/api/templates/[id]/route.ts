@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { ContractTemplate } from '@/types/template';
 import { getKVStore } from '@/lib/db/kv';
-import { demoTemplates, sampleTemplates } from '@/lib/db/template-store';
+import { demoTemplateStore, sampleTemplates } from '@/lib/db/template-store';
 
 export async function GET(
   request: NextRequest,
@@ -20,10 +20,10 @@ export async function GET(
     
     if (!isKVConfigured) {
       // Demo mode - use in-memory storage
-      if (demoTemplates.length === 0) {
-        demoTemplates.push(...sampleTemplates);
+      if (demoTemplateStore.isEmpty()) {
+        demoTemplateStore.setAll([...sampleTemplates]);
       }
-      templates = demoTemplates;
+      templates = demoTemplateStore.getAll();
     } else {
       // Production mode - use KV store
       templates = await kv.get<ContractTemplate[]>('templates') || [];
@@ -68,27 +68,21 @@ export async function PATCH(
     
     if (!isKVConfigured) {
       // Demo mode - use in-memory storage
-      if (demoTemplates.length === 0) {
-        demoTemplates.push(...sampleTemplates);
+      if (demoTemplateStore.isEmpty()) {
+        demoTemplateStore.setAll([...sampleTemplates]);
       }
       
-      const index = demoTemplates.findIndex(t => t.templateId === id);
-      if (index === -1) {
+      const updatedTemplate = demoTemplateStore.update(id, body);
+      if (!updatedTemplate) {
         return NextResponse.json(
           { success: false, error: 'Template not found' },
           { status: 404 }
         );
       }
 
-      demoTemplates[index] = {
-        ...demoTemplates[index],
-        ...body,
-        updatedAt: new Date()
-      };
-
       return NextResponse.json({ 
         success: true, 
-        data: demoTemplates[index],
+        data: updatedTemplate,
         isDemo: true 
       });
     }
@@ -140,14 +134,13 @@ export async function DELETE(
     
     if (!isKVConfigured) {
       // Demo mode - use in-memory storage
-      if (demoTemplates.length === 0) {
-        demoTemplates.push(...sampleTemplates);
+      if (demoTemplateStore.isEmpty()) {
+        demoTemplateStore.setAll([...sampleTemplates]);
       }
       
-      const initialLength = demoTemplates.length;
-      demoTemplates = demoTemplates.filter(t => t.templateId !== id);
+      const deleted = demoTemplateStore.delete(id);
       
-      if (demoTemplates.length === initialLength) {
+      if (!deleted) {
         return NextResponse.json(
           { success: false, error: 'Template not found' },
           { status: 404 }
