@@ -1,10 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getContractService } from '@/lib/db/mongodb';
-import { Contract, ContractSearchParams } from '@/types/contract';
+import { Contract } from '@/types/contract';
 import { rateLimiter } from '@/lib/db/kv';
 import { ERROR_MESSAGES } from '@/lib/utils/constants';
-import { config } from '@/lib/config/env';
-import { demoContractStore } from '@/lib/db/demo-store';
+import { getContractService, ContractSearchParams } from '@/lib/services/contract-service';
 
 // GET /api/contracts - Get all contracts with pagination and filtering
 export async function GET(request: NextRequest) {
@@ -27,46 +25,12 @@ export async function GET(request: NextRequest) {
       type: searchParams.get('type')?.split(',') as any || undefined,
       page: parseInt(searchParams.get('page') || '1'),
       limit: parseInt(searchParams.get('limit') || '20'),
-      sortBy: searchParams.get('sortBy') || 'createdAt',
+      sortBy: searchParams.get('sortBy') as keyof Contract || 'createdAt',
       sortOrder: (searchParams.get('sortOrder') || 'desc') as 'asc' | 'desc',
     };
 
-    // Demo mode - use in-memory store
-    const isActuallyDemo = !process.env.MONGODB_URI || process.env.MONGODB_URI === 'demo-mode' || process.env.MONGODB_URI.includes('your-cluster');
-    
-    if (config.isDemo || isActuallyDemo) {
-      const filter = {
-        status: params.status,
-        type: params.type,
-        query: params.query,
-      };
-      
-      const result = demoContractStore.getPaginated({
-        page: params.page || 1,
-        limit: params.limit || 20,
-        filter,
-        sort: { [params.sortBy || 'createdAt']: params.sortOrder === 'asc' ? 1 : -1 },
-      });
-      
-      return NextResponse.json(result);
-    }
-
-    const contractService = await getContractService();
-    
-    // Build filter
-    const filter: any = {};
-    if (params.status?.length) {
-      filter.status = { $in: params.status };
-    }
-    if (params.type?.length) {
-      filter.type = { $in: params.type };
-    }
-
-    const result = await contractService['contracts'].findMany(filter, {
-      page: params.page,
-      limit: params.limit,
-      sort: { [params.sortBy!]: params.sortOrder === 'asc' ? 1 : -1 },
-    });
+    const contractService = getContractService();
+    const result = await contractService.searchContracts(params);
 
     return NextResponse.json(result);
   } catch (error) {
@@ -126,16 +90,8 @@ export async function POST(request: NextRequest) {
       updatedAt: new Date(),
     };
 
-    // Demo mode - use in-memory store
-    const isActuallyDemo = !process.env.MONGODB_URI || process.env.MONGODB_URI === 'demo-mode' || process.env.MONGODB_URI.includes('your-cluster');
-    
-    if (config.isDemo || isActuallyDemo) {
-      const newContract = demoContractStore.create(contract);
-      return NextResponse.json(newContract, { status: 201 });
-    }
-
-    const contractService = await getContractService();
-    const newContract = await contractService.createContract(contract, userId);
+    const contractService = getContractService();
+    const newContract = await contractService.createContract(contract);
 
     return NextResponse.json(newContract, { status: 201 });
   } catch (error) {

@@ -1,4 +1,3 @@
-import Header from '@/components/layout/Header';
 import ContractDashboard from '@/components/contracts/ContractDashboard';
 
 export const metadata = {
@@ -7,10 +6,5 @@ export const metadata = {
 };
 
 export default function ContractsPage() {
-  return (
-    <div className="min-h-screen bg-gray-50">
-      <Header />
-      <ContractDashboard />
-    </div>
-  );
+  return <ContractDashboard />;
 }

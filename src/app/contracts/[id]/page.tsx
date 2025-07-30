@@ -1,4 +1,3 @@
-import Header from '@/components/layout/Header';
 import ContractDetail from '@/components/contracts/ContractDetail';
 
 export const metadata = {
@@ -15,10 +14,5 @@ interface PageProps {
 export default async function ContractDetailPage({ params }: PageProps) {
   const { id } = await params;
   
-  return (
-    <div className="min-h-screen bg-gray-50">
-      <Header />
-      <ContractDetail contractId={id} />
-    </div>
-  );
+  return <ContractDetail contractId={id} />;
 }

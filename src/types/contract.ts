@@ -132,6 +132,7 @@ export type ContractStatus =
 
 export type ContractType = 
   | 'service_agreement'
+  | 'design_agreement'
   | 'nda'
   | 'employment'
   | 'sales'

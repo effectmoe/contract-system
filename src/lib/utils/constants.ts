@@ -37,6 +37,7 @@ export const CONTRACT_STATUS_LABELS = {
 // Type labels (Japanese)
 export const CONTRACT_TYPE_LABELS = {
   [CONTRACT_TYPES.SERVICE_AGREEMENT]: '業務委託契約',
+  design_agreement: 'デザイン制作契約',
   [CONTRACT_TYPES.NDA]: '秘密保持契約',
   [CONTRACT_TYPES.EMPLOYMENT]: '雇用契約',
   [CONTRACT_TYPES.SALES]: '売買契約',
@@ -140,6 +141,10 @@ export const DEFAULT_TEMPLATES = {
   SERVICE_AGREEMENT: {
     title: '業務委託契約書',
     fields: ['業務内容', '契約期間', '報酬', '支払条件'],
+  },
+  DESIGN_AGREEMENT: {
+    title: 'デザイン制作契約書',
+    fields: ['制作内容', '納期', '制作費', '著作権', '修正回数'],
   },
   NDA: {
     title: '秘密保持契約書',

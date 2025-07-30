@@ -1,9 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getContractService } from '@/lib/db/mongodb';
 import { rateLimiter } from '@/lib/db/kv';
 import { ERROR_MESSAGES, SUCCESS_MESSAGES } from '@/lib/utils/constants';
-import { config } from '@/lib/config/env';
-import { demoContractStore } from '@/lib/db/demo-store';
+import { getContractService } from '@/lib/services/contract-service';
 
 // GET /api/contracts/[id] - Get single contract
 export async function GET(
@@ -24,26 +22,8 @@ export async function GET(
 
     const { id } = await params;
     
-    // Demo mode - use in-memory store
-    const isActuallyDemo = !process.env.MONGODB_URI || process.env.MONGODB_URI === 'demo-mode' || process.env.MONGODB_URI.includes('your-cluster');
-    
-    if (config.isDemo || isActuallyDemo) {
-      const contract = demoContractStore.get(id);
-      
-      if (!contract) {
-        return NextResponse.json(
-          { error: ERROR_MESSAGES.CONTRACT_NOT_FOUND },
-          { status: 404 }
-        );
-      }
-      
-      return NextResponse.json(contract);
-    }
-    
-    const contractService = await getContractService();
-    const contract = await contractService['contracts'].findOne({ 
-      contractId: id 
-    });
+    const contractService = getContractService();
+    const contract = await contractService.getContract(id);
 
     if (!contract) {
       return NextResponse.json(
@@ -51,15 +31,6 @@ export async function GET(
         { status: 404 }
       );
     }
-
-    // Log view action
-    await contractService['auditLogs'].create({
-      id: `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-      action: 'viewed',
-      performedBy: 'system', // TODO: Get from auth
-      performedAt: new Date(),
-      details: { contractId: id },
-    });
 
     return NextResponse.json(contract);
   } catch (error) {
@@ -90,57 +61,17 @@ export async function PUT(
 
     const { id } = await params;
     const body = await request.json();
-    const contractService = await getContractService();
+    const contractService = getContractService();
 
-    // Check if contract exists
-    const existingContract = await contractService['contracts'].findOne({ 
-      contractId: id 
-    });
+    // Update contract using service layer
+    const updatedContract = await contractService.updateContract(id, body);
 
-    if (!existingContract) {
+    if (!updatedContract) {
       return NextResponse.json(
         { error: ERROR_MESSAGES.CONTRACT_NOT_FOUND },
         { status: 404 }
       );
     }
-
-    // Prevent updating completed contracts
-    if (existingContract.status === 'completed') {
-      return NextResponse.json(
-        { error: '完了済みの契約は編集できません' },
-        { status: 400 }
-      );
-    }
-
-    // Update contract
-    const updateData = {
-      ...body,
-      updatedAt: new Date(),
-    };
-
-    const result = await contractService['contracts'].update(
-      { contractId: id },
-      { $set: updateData }
-    );
-
-    if (!result) {
-      return NextResponse.json(
-        { error: ERROR_MESSAGES.GENERIC },
-        { status: 500 }
-      );
-    }
-
-    // Log update action
-    await contractService['auditLogs'].create({
-      id: `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-      action: 'updated',
-      performedBy: 'system', // TODO: Get from auth
-      performedAt: new Date(),
-      details: { 
-        contractId: id,
-        changes: Object.keys(body)
-      },
-    });
 
     return NextResponse.json({ 
       message: SUCCESS_MESSAGES.CONTRACT_UPDATED,
@@ -175,104 +106,17 @@ export async function PATCH(
     const { id } = await params;
     const body = await request.json();
     
-    // Demo mode - use in-memory store
-    const isActuallyDemo = !process.env.MONGODB_URI || process.env.MONGODB_URI === 'demo-mode' || process.env.MONGODB_URI.includes('your-cluster');
-    
-    if (config.isDemo || isActuallyDemo) {
-      const contract = demoContractStore.get(id);
-      
-      if (!contract) {
-        return NextResponse.json(
-          { error: ERROR_MESSAGES.CONTRACT_NOT_FOUND },
-          { status: 404 }
-        );
-      }
+    const contractService = getContractService();
 
-      // Prevent updating completed contracts
-      if (contract.status === 'completed') {
-        return NextResponse.json(
-          { error: '完了済みの契約は編集できません' },
-          { status: 400 }
-        );
-      }
+    // Update contract using service layer
+    const updatedContract = await contractService.updateContract(id, body);
 
-      // Only allow updating draft contracts
-      if (contract.status !== 'draft') {
-        return NextResponse.json(
-          { error: '編集できるのは下書き状態の契約書のみです' },
-          { status: 400 }
-        );
-      }
-
-      // Update in demo store
-      const updatedContract = demoContractStore.update(id, body);
-
-      return NextResponse.json({ 
-        message: SUCCESS_MESSAGES.CONTRACT_UPDATED,
-        success: true,
-        contract: updatedContract
-      });
-    }
-    
-    const contractService = await getContractService();
-
-    // Check if contract exists
-    const existingContract = await contractService['contracts'].findOne({ 
-      contractId: id 
-    });
-
-    if (!existingContract) {
+    if (!updatedContract) {
       return NextResponse.json(
         { error: ERROR_MESSAGES.CONTRACT_NOT_FOUND },
         { status: 404 }
       );
     }
-
-    // Prevent updating completed contracts
-    if (existingContract.status === 'completed') {
-      return NextResponse.json(
-        { error: '完了済みの契約は編集できません' },
-        { status: 400 }
-      );
-    }
-
-    // Only allow updating draft contracts
-    if (existingContract.status !== 'draft') {
-      return NextResponse.json(
-        { error: '編集できるのは下書き状態の契約書のみです' },
-        { status: 400 }
-      );
-    }
-
-    // Update contract
-    const updateData = {
-      ...body,
-      updatedAt: new Date(),
-    };
-
-    const result = await contractService['contracts'].update(
-      { contractId: id },
-      { $set: updateData }
-    );
-
-    if (!result) {
-      return NextResponse.json(
-        { error: ERROR_MESSAGES.GENERIC },
-        { status: 500 }
-      );
-    }
-
-    // Log update action
-    await contractService['auditLogs'].create({
-      id: `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-      action: 'updated',
-      performedBy: 'system', // TODO: Get from auth
-      performedAt: new Date(),
-      details: { 
-        contractId: id,
-        changes: Object.keys(body)
-      },
-    });
 
     return NextResponse.json({ 
       message: SUCCESS_MESSAGES.CONTRACT_UPDATED,
@@ -306,72 +150,17 @@ export async function DELETE(
 
     const { id } = await params;
     
-    // Demo mode - use in-memory store
-    const isActuallyDemo = !process.env.MONGODB_URI || process.env.MONGODB_URI === 'demo-mode' || process.env.MONGODB_URI.includes('your-cluster');
-    
-    if (config.isDemo || isActuallyDemo) {
-      const contract = demoContractStore.get(id);
-      
-      if (!contract) {
-        return NextResponse.json(
-          { error: ERROR_MESSAGES.CONTRACT_NOT_FOUND },
-          { status: 404 }
-        );
-      }
-      
-      // Delete from demo store
-      const deleted = demoContractStore.delete(id);
-      
-      if (!deleted) {
-        return NextResponse.json(
-          { error: ERROR_MESSAGES.GENERIC },
-          { status: 500 }
-        );
-      }
-      
-      return NextResponse.json({ 
-        message: '契約書が削除されました',
-        success: true 
-      });
-    }
-    
-    const contractService = await getContractService();
+    const contractService = getContractService();
 
-    // Check if contract exists
-    const existingContract = await contractService['contracts'].findOne({ 
-      contractId: id 
-    });
+    // Delete contract using service layer
+    const deleted = await contractService.deleteContract(id);
 
-    if (!existingContract) {
+    if (!deleted) {
       return NextResponse.json(
         { error: ERROR_MESSAGES.CONTRACT_NOT_FOUND },
         { status: 404 }
       );
     }
-
-    // Hard delete (permanent removal)
-    const result = await contractService['contracts'].delete({ 
-      contractId: id 
-    });
-
-    if (!result) {
-      return NextResponse.json(
-        { error: ERROR_MESSAGES.GENERIC },
-        { status: 500 }
-      );
-    }
-
-    // Log deletion action
-    await contractService['auditLogs'].create({
-      id: `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-      action: 'deleted',
-      performedBy: 'system', // TODO: Get from auth
-      performedAt: new Date(),
-      details: { 
-        contractId: id,
-        title: existingContract.title
-      },
-    });
 
     return NextResponse.json({ 
       message: '契約書が削除されました',
