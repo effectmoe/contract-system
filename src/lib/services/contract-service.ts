@@ -1,9 +1,9 @@
 import { Contract, ContractStatus } from '@/types/contract';
+import { PaginatedResult } from '@/types/database';
 import { 
   ContractRepository, 
   ContractFilter, 
-  ContractSort, 
-  PaginatedResult,
+  ContractSort,
   getContractRepository 
 } from '@/lib/repositories';
 

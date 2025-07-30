@@ -1,16 +1,5 @@
 import { Contract } from '@/types/contract';
-
-export interface PaginatedResult<T> {
-  data: T[];
-  pagination: {
-    page: number;
-    limit: number;
-    total: number;
-    totalPages: number;
-    hasNext: boolean;
-    hasPrev: boolean;
-  };
-}
+import { PaginatedResult } from '@/types/database';
 
 export interface ContractFilter {
   query?: string;

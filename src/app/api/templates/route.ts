@@ -14,9 +14,8 @@ export async function GET(request: NextRequest) {
     
     if (!isKVConfigured) {
       // Demo mode - use in-memory storage
-      if (demoTemplateStore.isEmpty()) {
-        demoTemplateStore.setAll([...sampleTemplates]);
-      }
+      // Always ensure templates are initialized
+      demoTemplateStore.setAll([...sampleTemplates]);
       return NextResponse.json({ 
         success: true, 
         data: demoTemplateStore.getAll(),

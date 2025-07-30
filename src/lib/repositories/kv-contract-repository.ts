@@ -1,5 +1,6 @@
 import { Contract } from '@/types/contract';
-import { ContractRepository, ContractFilter, ContractSort, PaginatedResult } from './interfaces';
+import { ContractRepository, ContractFilter, ContractSort } from './interfaces';
+import { PaginatedResult } from '@/types/database';
 import { kvContractStore } from '@/lib/db/kv-contract-store';
 
 export class KVContractRepository implements ContractRepository {

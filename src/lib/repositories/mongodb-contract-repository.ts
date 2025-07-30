@@ -1,5 +1,6 @@
 import { Contract } from '@/types/contract';
-import { ContractRepository, ContractFilter, ContractSort, PaginatedResult } from './interfaces';
+import { ContractRepository, ContractFilter, ContractSort } from './interfaces';
+import { PaginatedResult } from '@/types/database';
 
 // Dynamic import to avoid client-side bundle issues
 const getMongoConnection = async () => {

@@ -20,9 +20,8 @@ export async function GET(
     
     if (!isKVConfigured) {
       // Demo mode - use in-memory storage
-      if (demoTemplateStore.isEmpty()) {
-        demoTemplateStore.setAll([...sampleTemplates]);
-      }
+      // Always ensure templates are initialized
+      demoTemplateStore.setAll([...sampleTemplates]);
       templates = demoTemplateStore.getAll();
     } else {
       // Production mode - use KV store
@@ -68,9 +67,8 @@ export async function PATCH(
     
     if (!isKVConfigured) {
       // Demo mode - use in-memory storage
-      if (demoTemplateStore.isEmpty()) {
-        demoTemplateStore.setAll([...sampleTemplates]);
-      }
+      // Always ensure templates are initialized
+      demoTemplateStore.setAll([...sampleTemplates]);
       
       const updatedTemplate = demoTemplateStore.update(id, body);
       if (!updatedTemplate) {
@@ -134,9 +132,8 @@ export async function DELETE(
     
     if (!isKVConfigured) {
       // Demo mode - use in-memory storage
-      if (demoTemplateStore.isEmpty()) {
-        demoTemplateStore.setAll([...sampleTemplates]);
-      }
+      // Always ensure templates are initialized
+      demoTemplateStore.setAll([...sampleTemplates]);
       
       const deleted = demoTemplateStore.delete(id);
       

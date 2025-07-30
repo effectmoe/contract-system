@@ -3,9 +3,11 @@ export type {
   ContractRepository,
   ContractFilter,
   ContractSort,
-  PaginatedResult,
   RepositoryFactory
 } from './interfaces';
+
+// Database types
+export type { PaginatedResult } from '@/types/database';
 
 // Repository implementations
 export { DemoContractRepository } from './demo-contract-repository';
