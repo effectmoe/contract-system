@@ -30,6 +30,13 @@ export default function EditTemplatePage() {
     fetchTemplate();
   }, [templateId]);
 
+  // テンプレートがロードされたらデフォルト値を更新
+  useEffect(() => {
+    if (template && !loading) {
+      updateVariableDefaultsFromContent();
+    }
+  }, [template?.content.clauses]);
+
   // 契約書文面から甲乙の社名を抽出する関数
   const extractPartiesFromContent = (content: string): { disclosingParty?: string; receivingParty?: string } => {
     const result: { disclosingParty?: string; receivingParty?: string } = {};
@@ -101,6 +108,27 @@ export default function EditTemplatePage() {
           const foundTemplate = listData.data?.find((t: ContractTemplate) => t.templateId === templateId);
           if (foundTemplate) {
             setTemplate(foundTemplate);
+            // デフォルト値を更新
+            setTimeout(() => {
+              const allClauses = foundTemplate.content.clauses
+                .map((clause: any) => clause.content)
+                .join('\n');
+              const extractedParties = extractPartiesFromContent(allClauses);
+              
+              const updatedVariables = foundTemplate.variables.map((variable: any) => {
+                if (variable.name === 'disclosingParty' && extractedParties.disclosingParty) {
+                  return { ...variable, defaultValue: extractedParties.disclosingParty };
+                } else if (variable.name === 'receivingParty' && extractedParties.receivingParty) {
+                  return { ...variable, defaultValue: extractedParties.receivingParty };
+                }
+                return variable;
+              });
+              
+              setTemplate({
+                ...foundTemplate,
+                variables: updatedVariables,
+              });
+            }, 0);
             return;
           }
         }
@@ -109,6 +137,28 @@ export default function EditTemplatePage() {
       
       const data = await response.json();
       setTemplate(data.data);
+      
+      // デフォルト値を更新
+      setTimeout(() => {
+        const allClauses = data.data.content.clauses
+          .map((clause: any) => clause.content)
+          .join('\n');
+        const extractedParties = extractPartiesFromContent(allClauses);
+        
+        const updatedVariables = data.data.variables.map((variable: any) => {
+          if (variable.name === 'disclosingParty' && extractedParties.disclosingParty) {
+            return { ...variable, defaultValue: extractedParties.disclosingParty };
+          } else if (variable.name === 'receivingParty' && extractedParties.receivingParty) {
+            return { ...variable, defaultValue: extractedParties.receivingParty };
+          }
+          return variable;
+        });
+        
+        setTemplate({
+          ...data.data,
+          variables: updatedVariables,
+        });
+      }, 0);
     } catch (error) {
       console.error('Failed to fetch template:', error);
       setError('テンプレートの読み込みに失敗しました');
