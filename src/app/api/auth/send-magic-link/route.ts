@@ -14,16 +14,21 @@ const requestSchema = z.object({
 
 export async function POST(request: NextRequest) {
   try {
+    console.log('Send magic link API called');
     const body = await request.json();
+    console.log('Request body:', body);
     const { contractId, partyId, email, name } = requestSchema.parse(body);
+    console.log('Parsed data:', { contractId, partyId, email, name });
 
     // Demo mode
     if (!process.env.MONGODB_URI) {
-      console.log('Demo mode: Magic link would be sent to', email);
+      console.log('Running in demo mode - Magic link would be sent to', email);
+      const demoLink = `/contracts/view?token=demo-token-${contractId}-${partyId}`;
+      console.log('Generated demo link:', demoLink);
       return NextResponse.json({
         success: true,
         message: 'メールを送信しました（デモモード）',
-        demoLink: `/contracts/view?token=demo-token-${contractId}-${partyId}`,
+        demoLink: demoLink,
       });
     }
 
@@ -119,8 +124,17 @@ export async function POST(request: NextRequest) {
     });
   } catch (error) {
     console.error('Send magic link error:', error);
+    
+    if (error instanceof z.ZodError) {
+      console.error('Validation error:', error.errors);
+      return NextResponse.json(
+        { error: 'リクエストデータが不正です', details: error.errors },
+        { status: 400 }
+      );
+    }
+    
     return NextResponse.json(
-      { error: 'リンクの送信に失敗しました' },
+      { error: 'リンクの送信に失敗しました', details: error instanceof Error ? error.message : 'Unknown error' },
       { status: 500 }
     );
   }

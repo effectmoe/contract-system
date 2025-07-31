@@ -57,6 +57,9 @@ export default function ContractDetail({ contractId }: ContractDetailProps) {
 
   const handleSendMagicLink = async (party: any) => {
     try {
+      console.log('Sending magic link for party:', party);
+      console.log('Contract ID:', contract!.contractId);
+      
       const response = await fetch('/api/auth/send-magic-link', {
         method: 'POST',
         headers: {
@@ -70,20 +73,28 @@ export default function ContractDetail({ contractId }: ContractDetailProps) {
         }),
       });
 
+      console.log('Response status:', response.status);
+      
       if (!response.ok) {
-        throw new Error('リンクの送信に失敗しました');
+        const errorData = await response.text();
+        console.error('Error response:', errorData);
+        throw new Error(`リンクの送信に失敗しました: ${response.status}`);
       }
 
       const data = await response.json();
+      console.log('Success response:', data);
       
       if (data.demoLink) {
         // Demo mode: show the link
-        alert(`デモモード: 以下のリンクで契約書を確認できます\n${window.location.origin}${data.demoLink}`);
+        const fullLink = `${window.location.origin}${data.demoLink}`;
+        alert(`デモモード: 以下のリンクで契約書を確認できます\n${fullLink}`);
+        console.log('Demo link:', fullLink);
       } else {
         alert(`${party.name}様にアクセスリンクを送信しました`);
       }
     } catch (err) {
-      alert('リンクの送信に失敗しました');
+      console.error('Send magic link error:', err);
+      alert(`リンクの送信に失敗しました: ${err instanceof Error ? err.message : '不明なエラー'}`);
     }
   };
 
