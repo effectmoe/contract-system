@@ -30,15 +30,59 @@ export default function EditTemplatePage() {
     fetchTemplate();
   }, [templateId]);
 
+  // 契約書文面から甲乙の社名を抽出する関数
+  const extractPartiesFromContent = (content: string): { disclosingParty?: string; receivingParty?: string } => {
+    const result: { disclosingParty?: string; receivingParty?: string } = {};
+    
+    // 甲：から始まる行を探す
+    const disclosingMatch = content.match(/甲[：:：]\s*(.+?)(?:\n|$)/);
+    if (disclosingMatch && disclosingMatch[1]) {
+      result.disclosingParty = disclosingMatch[1].trim();
+    }
+    
+    // 乙：から始まる行を探す
+    const receivingMatch = content.match(/乙[：:：]\s*(.+?)(?:\n|$)/);
+    if (receivingMatch && receivingMatch[1]) {
+      result.receivingParty = receivingMatch[1].trim();
+    }
+    
+    // 開示者：受領者：パターンも検索
+    const discloserMatch = content.match(/開示者[：:：]\s*(.+?)(?:\n|$)/);
+    if (!result.disclosingParty && discloserMatch && discloserMatch[1]) {
+      result.disclosingParty = discloserMatch[1].trim();
+    }
+    
+    const recipientMatch = content.match(/受領者[：:：]\s*(.+?)(?:\n|$)/);
+    if (!result.receivingParty && recipientMatch && recipientMatch[1]) {
+      result.receivingParty = recipientMatch[1].trim();
+    }
+    
+    return result;
+  };
+
   useEffect(() => {
     // Initialize preview values with default values
     if (template) {
       const defaults: Record<string, any> = {};
+      
+      // 契約書文面から甲乙の社名を抽出
+      const allClauses = template.content.clauses
+        .map(clause => clause.content)
+        .join('\n');
+      const extractedParties = extractPartiesFromContent(allClauses);
+      
       template.variables.forEach(variable => {
-        defaults[variable.name] = variable.defaultValue || 
-          (variable.type === 'number' ? 0 : 
-           variable.type === 'date' ? new Date().toISOString().split('T')[0] : 
-           `[${variable.displayName}]`);
+        // disclosingPartyとreceivingPartyの場合は抽出した値を使用
+        if (variable.name === 'disclosingParty' && extractedParties.disclosingParty) {
+          defaults[variable.name] = extractedParties.disclosingParty;
+        } else if (variable.name === 'receivingParty' && extractedParties.receivingParty) {
+          defaults[variable.name] = extractedParties.receivingParty;
+        } else {
+          defaults[variable.name] = variable.defaultValue || 
+            (variable.type === 'number' ? 0 : 
+             variable.type === 'date' ? new Date().toISOString().split('T')[0] : 
+             `[${variable.displayName}]`);
+        }
       });
       setPreviewValues(defaults);
     }
@@ -132,6 +176,11 @@ export default function EditTemplatePage() {
         clauses: updatedClauses,
       },
     });
+    
+    // 条項の内容が更新されたら、甲乙の社名を再抽出
+    if (field === 'content') {
+      setTimeout(() => updateVariableDefaultsFromContent(), 100);
+    }
   };
 
   const deleteClause = (index: number) => {
@@ -190,6 +239,30 @@ export default function EditTemplatePage() {
     
     const updatedVariables = [...template.variables];
     updatedVariables[index] = { ...updatedVariables[index], [field]: value };
+    
+    setTemplate({
+      ...template,
+      variables: updatedVariables,
+    });
+  };
+
+  // 条項が更新されたときに甲乙の社名を再抽出してデフォルト値を更新
+  const updateVariableDefaultsFromContent = () => {
+    if (!template) return;
+    
+    const allClauses = template.content.clauses
+      .map(clause => clause.content)
+      .join('\n');
+    const extractedParties = extractPartiesFromContent(allClauses);
+    
+    const updatedVariables = template.variables.map(variable => {
+      if (variable.name === 'disclosingParty' && extractedParties.disclosingParty) {
+        return { ...variable, defaultValue: extractedParties.disclosingParty };
+      } else if (variable.name === 'receivingParty' && extractedParties.receivingParty) {
+        return { ...variable, defaultValue: extractedParties.receivingParty };
+      }
+      return variable;
+    });
     
     setTemplate({
       ...template,
@@ -491,6 +564,11 @@ export default function EditTemplatePage() {
                             value={variable.defaultValue || ''}
                             onChange={(e) => updateVariable(index, 'defaultValue', e.target.value)}
                           />
+                          {(variable.name === 'disclosingParty' || variable.name === 'receivingParty') && (
+                            <p className="text-xs text-gray-500 mt-1">
+                              契約書文面から自動的に抽出されます
+                            </p>
+                          )}
                         </div>
                       </div>
                       

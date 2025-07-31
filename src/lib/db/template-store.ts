@@ -66,7 +66,7 @@ export const sampleTemplates: ContractTemplate[] = [
         {
           id: 'clause-1',
           title: '目的',
-          content: '本契約は、{{disclosingParty}}（以下「開示者」という）が{{receivingParty}}（以下「受領者」という）に対して開示する秘密情報の取り扱いについて定めることを目的とする。',
+          content: '本契約は、{{disclosingParty}}（以下「乙」という）が{{receivingParty}}（以下「甲」という）に対して開示する秘密情報の取り扱いについて定めることを目的とする。',
           isRequired: true,
           order: 1,
           variables: ['disclosingParty', 'receivingParty']
@@ -74,14 +74,14 @@ export const sampleTemplates: ContractTemplate[] = [
         {
           id: 'clause-2',
           title: '秘密情報の定義',
-          content: '本契約において「秘密情報」とは、開示者が受領者に対して、秘密である旨を明示して開示する情報をいう。',
+          content: '本契約において「秘密情報」とは、乙が甲に対して、秘密である旨を明示して開示する情報をいう。',
           isRequired: true,
           order: 2
         },
         {
           id: 'clause-3',
           title: '秘密保持期間',
-          content: '受領者は、本契約締結日から{{confidentialityPeriod}}年間、秘密情報を秘密として保持する。',
+          content: '甲は、本契約締結日から{{confidentialityPeriod}}年間、秘密情報を秘密として保持する。',
           isRequired: true,
           order: 3,
           variables: ['confidentialityPeriod']
@@ -92,14 +92,14 @@ export const sampleTemplates: ContractTemplate[] = [
       {
         id: 'disclosingParty',
         name: 'disclosingParty',
-        displayName: '開示者',
+        displayName: '乙',
         type: 'text',
         required: true
       },
       {
         id: 'receivingParty',
         name: 'receivingParty',
-        displayName: '受領者',
+        displayName: '甲',
         type: 'text',
         required: true
       },
