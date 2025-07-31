@@ -30,12 +30,16 @@ export default function EditTemplatePage() {
     fetchTemplate();
   }, [templateId]);
 
-  // テンプレートがロードされたらデフォルト値を更新
+  // テンプレートがロードされたらデフォルト値を更新（初回のみ）
   useEffect(() => {
     if (template && !loading) {
-      updateVariableDefaultsFromContent();
+      // 初回ロード時のみ実行
+      const timer = setTimeout(() => {
+        updateVariableDefaultsFromContent();
+      }, 100);
+      return () => clearTimeout(timer);
     }
-  }, [template?.content.clauses]);
+  }, [templateId]); // templateIdが変わった時のみ再実行
 
   // 契約書文面から甲乙の社名を抽出する関数
   const extractPartiesFromContent = (content: string): { disclosingParty?: string; receivingParty?: string } => {
