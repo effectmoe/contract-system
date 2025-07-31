@@ -31,15 +31,17 @@ export default function EditTemplatePage() {
   }, [templateId]);
 
   // テンプレートがロードされたらデフォルト値を更新（初回のみ）
+  const [hasInitialized, setHasInitialized] = useState(false);
   useEffect(() => {
-    if (template && !loading) {
+    if (template && !loading && !hasInitialized) {
       // 初回ロード時のみ実行
       const timer = setTimeout(() => {
         updateVariableDefaultsFromContent();
+        setHasInitialized(true);
       }, 100);
       return () => clearTimeout(timer);
     }
-  }, [templateId]); // templateIdが変わった時のみ再実行
+  }, [template, loading, hasInitialized]);
 
   // 契約書文面から甲乙の社名を抽出する関数
   const extractPartiesFromContent = (content: string): { disclosingParty?: string; receivingParty?: string } => {
@@ -230,11 +232,6 @@ export default function EditTemplatePage() {
         clauses: updatedClauses,
       },
     });
-    
-    // 条項の内容が更新されたら、甲乙の社名を再抽出
-    if (field === 'content') {
-      setTimeout(() => updateVariableDefaultsFromContent(), 100);
-    }
   };
 
   const deleteClause = (index: number) => {
