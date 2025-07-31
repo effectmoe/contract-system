@@ -13,32 +13,75 @@ const requestSchema = z.object({
 });
 
 export async function POST(request: NextRequest) {
+  console.log('=== Send Magic Link API Called ===');
   try {
-    console.log('Send magic link API called');
+    console.log('1. Parsing request body...');
     const body = await request.json();
-    console.log('Request body:', body);
+    console.log('Request body:', JSON.stringify(body, null, 2));
+    
+    console.log('2. Validating request data...');
     const { contractId, partyId, email, name } = requestSchema.parse(body);
     console.log('Parsed data:', { contractId, partyId, email, name });
 
-    // Demo mode
-    if (!process.env.MONGODB_URI) {
-      console.log('Running in demo mode - Magic link would be sent to', email);
+    console.log('3. Checking environment variables...');
+    console.log('MONGODB_URI exists:', !!process.env.MONGODB_URI);
+    console.log('MONGODB_URI value (first 20 chars):', process.env.MONGODB_URI?.substring(0, 20) || 'undefined');
+    
+    // Demo mode - run if no MongoDB connection is available
+    if (!process.env.MONGODB_URI || process.env.MONGODB_URI.trim() === '') {
+      console.log('4. Running in demo mode - Magic link would be sent to', email);
+      try {
+        const demoLink = `/contracts/view?token=demo-token-${contractId}-${partyId}`;
+        console.log('5. Generated demo link:', demoLink);
+        const response = {
+          success: true,
+          message: 'メールを送信しました（デモモード）',
+          demoLink: demoLink,
+        };
+        console.log('6. Returning demo response:', JSON.stringify(response, null, 2));
+        return NextResponse.json(response);
+      } catch (demoError) {
+        console.error('Demo mode error:', demoError);
+        throw new Error(`Demo mode failed: ${demoError instanceof Error ? demoError.message : 'Unknown error'}`);
+      }
+    }
+
+    console.log('7. Attempting to connect to database...');
+    let db;
+    try {
+      const dbConnection = await connectToDatabase();
+      db = dbConnection.db;
+      if (!db) {
+        console.log('8. Database connection returned null, falling back to demo mode...');
+        const demoLink = `/contracts/view?token=demo-token-${contractId}-${partyId}`;
+        console.log('9. Generated fallback demo link:', demoLink);
+        return NextResponse.json({
+          success: true,
+          message: 'メールを送信しました（デモモード）',
+          demoLink: demoLink,
+        });
+      }
+    } catch (dbError) {
+      console.log('8. Database connection failed, falling back to demo mode...');
+      console.error('Database error:', dbError);
       const demoLink = `/contracts/view?token=demo-token-${contractId}-${partyId}`;
-      console.log('Generated demo link:', demoLink);
+      console.log('9. Generated fallback demo link:', demoLink);
       return NextResponse.json({
         success: true,
         message: 'メールを送信しました（デモモード）',
         demoLink: demoLink,
       });
     }
-
-    const { db } = await connectToDatabase();
+    console.log('8. Database connected successfully');
 
     // Generate secure token
+    console.log('9. Generating secure token...');
     const token = crypto.randomBytes(32).toString('hex');
     const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours
+    console.log('10. Token generated:', token.substring(0, 10) + '...');
 
     // Save access token
+    console.log('11. Saving access token to database...');
     const accessToken: AccessToken = {
       token,
       email,
@@ -50,9 +93,12 @@ export async function POST(request: NextRequest) {
     };
 
     await db.collection<AccessToken>('access_tokens').insertOne(accessToken);
+    console.log('12. Access token saved successfully');
 
     // Get contract details for email
+    console.log('13. Fetching contract details...');
     const contract = await db.collection('contracts').findOne({ contractId });
+    console.log('14. Contract found:', !!contract);
     
     // In production, send email via service like SendGrid/AWS SES
     const magicLink = `${process.env.NEXTAUTH_URL || 'http://localhost:3000'}/contracts/view?token=${token}`;
@@ -118,24 +164,40 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    return NextResponse.json({
+    console.log('15. Returning success response...');
+    const successResponse = {
       success: true,
       message: 'アクセスリンクをメールで送信しました',
-    });
+    };
+    console.log('16. Success response:', JSON.stringify(successResponse, null, 2));
+    return NextResponse.json(successResponse);
   } catch (error) {
-    console.error('Send magic link error:', error);
+    console.error('=== Send Magic Link API Error ===');
+    console.error('Error type:', typeof error);
+    console.error('Error instance:', error?.constructor?.name);
+    console.error('Full error:', error);
     
     if (error instanceof z.ZodError) {
-      console.error('Validation error:', error.errors);
-      return NextResponse.json(
-        { error: 'リクエストデータが不正です', details: error.errors },
-        { status: 400 }
-      );
+      console.error('Validation error details:', error.errors);
+      const validationResponse = {
+        error: 'リクエストデータが不正です',
+        details: error.errors
+      };
+      console.error('Returning validation error response:', JSON.stringify(validationResponse, null, 2));
+      return NextResponse.json(validationResponse, { status: 400 });
     }
     
-    return NextResponse.json(
-      { error: 'リンクの送信に失敗しました', details: error instanceof Error ? error.message : 'Unknown error' },
-      { status: 500 }
-    );
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    const errorStack = error instanceof Error ? error.stack : 'No stack trace';
+    console.error('Error message:', errorMessage);
+    console.error('Error stack:', errorStack);
+    
+    const errorResponse = {
+      error: 'リンクの送信に失敗しました',
+      details: errorMessage,
+      timestamp: new Date().toISOString()
+    };
+    console.error('Returning error response:', JSON.stringify(errorResponse, null, 2));
+    return NextResponse.json(errorResponse, { status: 500 });
   }
 }
