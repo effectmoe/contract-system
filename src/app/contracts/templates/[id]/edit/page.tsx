@@ -72,11 +72,11 @@ export default function EditTemplatePage() {
       const extractedParties = extractPartiesFromContent(allClauses);
       
       template.variables.forEach(variable => {
-        // disclosingPartyとreceivingPartyの場合は抽出した値を使用
-        if (variable.name === 'disclosingParty' && extractedParties.disclosingParty) {
-          defaults[variable.name] = extractedParties.disclosingParty;
-        } else if (variable.name === 'receivingParty' && extractedParties.receivingParty) {
-          defaults[variable.name] = extractedParties.receivingParty;
+        // disclosingPartyとreceivingPartyの場合は抽出した値を優先的に使用
+        if (variable.name === 'disclosingParty') {
+          defaults[variable.name] = extractedParties.disclosingParty || variable.defaultValue || `[${variable.displayName}]`;
+        } else if (variable.name === 'receivingParty') {
+          defaults[variable.name] = extractedParties.receivingParty || variable.defaultValue || `[${variable.displayName}]`;
         } else {
           defaults[variable.name] = variable.defaultValue || 
             (variable.type === 'number' ? 0 : 
