@@ -76,8 +76,12 @@ export async function PATCH(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { id } = await params;
+    const resolvedParams = await params;
+    const id = resolvedParams.id;
     const body = await request.json();
+    
+    console.log('PATCH request received for template:', id);
+    console.log('Request body:', JSON.stringify(body, null, 2));
     const kv = await getKVStore();
     
     // Check if KV is available
@@ -105,12 +109,21 @@ export async function PATCH(
     }
     
     // Production mode - use KV store
-    const templates = await kv.get<ContractTemplate[]>('templates') || [];
+    let templates = await kv.get<ContractTemplate[]>('templates') || [];
+    
+    // Initialize with sample templates if none exist
+    if (templates.length === 0) {
+      console.log('No templates found in KV, initializing with sample templates');
+      await kv.set('templates', sampleTemplates);
+      templates = sampleTemplates;
+    }
     
     const index = templates.findIndex(t => t.templateId === id);
     if (index === -1) {
+      console.error('Template not found:', id);
+      console.log('Available templates:', templates.map(t => t.templateId));
       return NextResponse.json(
-        { success: false, error: 'Template not found' },
+        { success: false, error: 'Template not found', requestedId: id },
         { status: 404 }
       );
     }
@@ -122,6 +135,7 @@ export async function PATCH(
     };
 
     await kv.set('templates', templates);
+    console.log('Template updated successfully:', id);
 
     return NextResponse.json({ 
       success: true, 
