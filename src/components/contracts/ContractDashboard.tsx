@@ -218,17 +218,12 @@ export default function ContractDashboard() {
             if (statusFilter === 'all') {
               // No filter needed for all contracts
             } else if (statusFilter === 'expiring_soon') {
-              // Set a date range filter for contracts expiring within 7 days
-              const now = new Date();
-              const sevenDaysFromNow = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
-              updateFilter('dateRange', {
-                field: 'signatureExpiresAt',
-                from: now,
-                to: sevenDaysFromNow,
-              });
+              // For expiring soon, we'll filter by pending_signature status
+              // and manually filter in the component
+              updateFilter('statusFilter', 'pending_signature');
             } else {
               // Filter by status
-              updateFilter('status', statusFilter);
+              updateFilter('statusFilter', statusFilter);
             }
           }}
         />
