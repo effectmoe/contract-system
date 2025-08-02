@@ -1,6 +1,7 @@
 'use client';
 
 import { Clock, CheckCircle, FileText, AlertCircle } from 'lucide-react';
+import { ContractStatus } from '@/types/contract';
 
 interface ContractStatsProps {
   stats: {
@@ -11,9 +12,10 @@ interface ContractStatsProps {
     expiring_soon: number;
   };
   loading?: boolean;
+  onStatClick?: (status: ContractStatus | 'all' | 'expiring_soon') => void;
 }
 
-export default function ContractStats({ stats, loading }: ContractStatsProps) {
+export default function ContractStats({ stats, loading, onStatClick }: ContractStatsProps) {
   if (loading) {
     return (
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
@@ -39,6 +41,7 @@ export default function ContractStats({ stats, loading }: ContractStatsProps) {
       icon: FileText,
       color: 'text-blue-600',
       bgColor: 'bg-blue-50',
+      statusFilter: 'all' as const,
     },
     {
       label: '下書き',
@@ -46,6 +49,7 @@ export default function ContractStats({ stats, loading }: ContractStatsProps) {
       icon: FileText,
       color: 'text-gray-600',
       bgColor: 'bg-gray-50',
+      statusFilter: 'draft' as ContractStatus,
     },
     {
       label: '署名待ち',
@@ -53,6 +57,7 @@ export default function ContractStats({ stats, loading }: ContractStatsProps) {
       icon: Clock,
       color: 'text-yellow-600',
       bgColor: 'bg-yellow-50',
+      statusFilter: 'pending_signature' as ContractStatus,
     },
     {
       label: '完了',
@@ -60,6 +65,7 @@ export default function ContractStats({ stats, loading }: ContractStatsProps) {
       icon: CheckCircle,
       color: 'text-green-600',
       bgColor: 'bg-green-50',
+      statusFilter: 'completed' as ContractStatus,
     },
     {
       label: '期限間近',
@@ -67,13 +73,18 @@ export default function ContractStats({ stats, loading }: ContractStatsProps) {
       icon: AlertCircle,
       color: 'text-red-600',
       bgColor: 'bg-red-50',
+      statusFilter: 'expiring_soon' as const,
     },
   ];
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6 mb-8">
       {statItems.map((item, index) => (
-        <div key={index} className="bg-white rounded-xl shadow-lg p-6 hover:shadow-xl transition-shadow">
+        <div 
+          key={index} 
+          className="bg-white rounded-xl shadow-lg p-6 hover:shadow-xl transition-shadow cursor-pointer"
+          onClick={() => onStatClick?.(item.statusFilter)}
+        >
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm font-medium text-gray-600 mb-1">

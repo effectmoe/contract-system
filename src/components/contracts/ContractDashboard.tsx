@@ -207,7 +207,31 @@ export default function ContractDashboard() {
         </div>
 
         {/* Stats */}
-        <ContractStats stats={stats} loading={loading} />
+        <ContractStats 
+          stats={stats} 
+          loading={loading}
+          onStatClick={(statusFilter) => {
+            // Reset filters first
+            resetFilters();
+            
+            // Apply new filter based on clicked stat
+            if (statusFilter === 'all') {
+              // No filter needed for all contracts
+            } else if (statusFilter === 'expiring_soon') {
+              // Set a date range filter for contracts expiring within 7 days
+              const now = new Date();
+              const sevenDaysFromNow = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
+              updateFilter('dateRange', {
+                field: 'signatureExpiresAt',
+                from: now,
+                to: sevenDaysFromNow,
+              });
+            } else {
+              // Filter by status
+              updateFilter('status', statusFilter);
+            }
+          }}
+        />
 
         {/* Filters */}
         <ContractFilters
