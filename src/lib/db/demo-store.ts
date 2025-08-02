@@ -12,10 +12,7 @@ class DemoContractStore {
 
   private initialize() {
     if (!this.initialized) {
-      // 初期化時にデモデータを読み込む
-      demoContracts.forEach(contract => {
-        this.contracts.set(contract.contractId, contract);
-      });
+      // 初期化時はデモデータを読み込まない（本番モードではMongoDBを使用）
       this.initialized = true;
     }
   }
