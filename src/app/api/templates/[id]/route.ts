@@ -11,23 +11,64 @@ export async function GET(
   const resolvedParams = await params;
   const id = resolvedParams.id;
   
-  // Always use sample templates for now
-  const template = sampleTemplates.find(t => t.templateId === id);
-  
-  if (!template) {
+  try {
+    const kv = await getKVStore();
+    
+    // Check if KV is available
+    const kvUrl = process.env.KV_REST_API_URL;
+    const kvToken = process.env.KV_REST_API_TOKEN;
+    const isKVConfigured = kvUrl && kvToken && !kvUrl.includes('your-kv-instance') && kvUrl !== 'demo-mode';
+    
+    if (!isKVConfigured) {
+      // Demo mode - use sample templates
+      const template = sampleTemplates.find(t => t.templateId === id);
+      
+      if (!template) {
+        return NextResponse.json({
+          success: false,
+          error: 'Template not found',
+          requestedId: id,
+          availableTemplates: sampleTemplates.map(t => ({ id: t.templateId, name: t.name }))
+        }, { status: 404 });
+      }
+      
+      return NextResponse.json({
+        success: true,
+        data: template,
+        isDemo: true
+      });
+    }
+    
+    // Production mode - use KV store
+    let templates = await kv.get<ContractTemplate[]>('templates') || [];
+    
+    // Initialize with sample templates if none exist
+    if (templates.length === 0) {
+      await kv.set('templates', sampleTemplates);
+      templates = sampleTemplates;
+    }
+    
+    const template = templates.find(t => t.templateId === id);
+    
+    if (!template) {
+      return NextResponse.json({
+        success: false,
+        error: 'Template not found',
+        requestedId: id
+      }, { status: 404 });
+    }
+    
     return NextResponse.json({
-      success: false,
-      error: 'Template not found in sample data',
-      requestedId: id,
-      availableTemplates: sampleTemplates.map(t => ({ id: t.templateId, name: t.name }))
-    }, { status: 404 });
+      success: true,
+      data: template
+    });
+  } catch (error) {
+    console.error('Failed to fetch template:', error);
+    return NextResponse.json(
+      { success: false, error: 'Failed to fetch template' },
+      { status: 500 }
+    );
   }
-  
-  return NextResponse.json({
-    success: true,
-    data: template,
-    isDemo: true
-  });
 }
 
 export async function PATCH(
